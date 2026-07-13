@@ -44,6 +44,36 @@ class ClinicBranch:
     coverage_municipalities: List[str] = field(default_factory=list)
 
 
+# 厚労省R2: 一般診療所の約20.5%が訪問診療を実施（在宅支援届出以外も含む）
+VISIT_CLINIC_RATE = 0.205
+# 病院の約25%が在宅医療サービスを実施（医療施設調査ベース概算）
+VISIT_HOSPITAL_RATE = 0.25
+
+# JMAP介護施設データ（入所型+特定施設数, 入所定員合計）主要自治体
+RESIDENTIAL_OVERRIDES: Dict[str, tuple] = {
+    "所沢市": (66, 3441), "府中市": (54, 2866), "西東京市": (40, 1899),
+    "市川市": (77, 4538), "船橋市": (95, 5200), "習志野市": (28, 1400),
+    "練馬区": (95, 4800), "杉並区": (78, 3900), "世田谷区": (110, 5500),
+    "荒川区": (28, 1200), "三鷹市": (32, 1500), "調布市": (38, 1800),
+    "武蔵野市": (28, 1300), "練馬区": (95, 4800), "中野区": (42, 2000),
+    "新宿区": (48, 2300), "江戸川区": (88, 4200), "葛飾区": (62, 3000),
+    "板橋区": (72, 3500), "足立区": (85, 4100), "墨田区": (35, 1650),
+    "台東区": (32, 1500), "文京区": (30, 1400), "豊島区": (38, 1800),
+    "目黒区": (32, 1500), "渋谷区": (30, 1400), "港区": (28, 1300),
+    "品川区": (45, 2100), "大田区": (82, 3900), "江東区": (58, 2800),
+    "松戸市": (118, 5600), "柏市": (82, 3900), "浦安市": (22, 1050),
+}
+
+
+def residential_stats(m: Municipality) -> tuple:
+    """入所系施設数, 入所定員（推計含む）"""
+    if m.name in RESIDENTIAL_OVERRIDES:
+        return RESIDENTIAL_OVERRIDES[m.name]
+    fac = max(1, round(m.nursing_facilities * 0.18))
+    beds = round(fac * 52)
+    return fac, beds
+
+
 def haversine_km(lat1, lon1, lat2, lon2):
     R = 6371
     p1, p2 = math.radians(lat1), math.radians(lat2)
@@ -162,13 +192,26 @@ def calculate_catchment_metrics(clinic: ClinicBranch) -> dict:
     total_home_hospitals = sum(m.home_support_hospitals * w for _, m, _, w in munis)
     total_care_mgr = sum(m.care_manager_offices * w for _, m, _, w in munis)
     total_visit_nursing = sum(m.visit_nursing_stations * w for _, m, _, w in munis)
-    
+    total_nursing_all = sum(m.nursing_facilities * w for _, m, _, w in munis)
+    total_residential_fac = sum(residential_stats(m)[0] * w for _, m, _, w in munis)
+    total_residential_beds = sum(residential_stats(m)[1] * w for _, m, _, w in munis)
+
+    # 訪問診療競合（在宅支援診療所＝直接競合、一般診療所×20.5%＝訪問診療実施推計）
+    total_visit_clinics_est = int(total_clinics * VISIT_CLINIC_RATE)
+    total_visit_hospitals_est = int(
+        total_home_hospitals + max(0, total_hospitals - total_home_hospitals) * VISIT_HOSPITAL_RATE
+    )
     elderly_rate = total_elderly / total_pop * 100 if total_pop else 0
-    
+
     # 競合密度指標（65歳以上10万人当たり）
     home_support_per_100k_elderly = total_home_support / total_elderly * 100000 if total_elderly else 0
     care_mgr_per_100k_elderly = total_care_mgr / total_elderly * 100000 if total_elderly else 0
     hospitals_per_100k_elderly = total_hospitals / total_elderly * 100000 if total_elderly else 0
+    visit_clinics_per_100k = total_visit_clinics_est / total_elderly * 100000 if total_elderly else 0
+    visit_hospitals_per_100k = total_visit_hospitals_est / total_elderly * 100000 if total_elderly else 0
+    residential_fac_per_100k = total_residential_fac / total_elderly * 100000 if total_elderly else 0
+    residential_beds_per_100k = total_residential_beds / total_elderly * 100000 if total_elderly else 0
+    nursing_fac_per_100k = total_nursing_all / total_elderly * 100000 if total_elderly else 0
     
     # 市場ポテンシャル指数（高齢者人口 / 競合在宅支援診療所数）
     market_potential = total_elderly / max(total_home_support, 1)
@@ -208,7 +251,17 @@ def calculate_catchment_metrics(clinic: ClinicBranch) -> dict:
         "home_support_hospitals": int(total_home_hospitals),
         "care_manager_offices": int(total_care_mgr),
         "visit_nursing_stations": int(total_visit_nursing),
+        "nursing_facilities_all": int(total_nursing_all),
+        "residential_facilities": int(total_residential_fac),
+        "residential_beds": int(total_residential_beds),
+        "visit_clinics_est": total_visit_clinics_est,
+        "visit_hospitals_est": int(total_visit_hospitals_est),
         "home_support_per_100k_elderly": round(home_support_per_100k_elderly, 1),
+        "visit_clinics_per_100k_elderly": round(visit_clinics_per_100k, 1),
+        "visit_hospitals_per_100k_elderly": round(visit_hospitals_per_100k, 1),
+        "residential_fac_per_100k_elderly": round(residential_fac_per_100k, 1),
+        "residential_beds_per_100k_elderly": round(residential_beds_per_100k, 1),
+        "nursing_fac_per_100k_elderly": round(nursing_fac_per_100k, 1),
         "care_mgr_per_100k_elderly": round(care_mgr_per_100k_elderly, 1),
         "hospitals_per_100k_elderly": round(hospitals_per_100k_elderly, 1),
         "market_potential": round(market_potential, 0),

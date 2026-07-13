@@ -23,6 +23,16 @@ CONF_DIR = Path(__file__).parent / "confidential"
 DATA_FILE = CONF_DIR / "operational_data.yaml"
 OUTPUT_FILE = CONF_DIR / "performance_report.txt"
 
+
+def pearson(xs, ys):
+    n = len(xs)
+    if n < 2:
+        return 0.0
+    mx, my = sum(xs) / n, sum(ys) / n
+    num = sum((x - mx) * (y - my) for x, y in zip(xs, ys))
+    den = math.sqrt(sum((x - mx) ** 2 for x in xs) * sum((y - my) ** 2 for y in ys))
+    return num / den if den else 0.0
+
 # 分析用の院名マッピング
 CLINIC_KEY_MAP = {
     "01": "本院", "02": "所沢", "03": "ひばりが丘", "04": "石神井公園",
@@ -110,6 +120,21 @@ def analyze():
             "comp_density": comp_density,
             "overlap": reg["wakasa_overlap_count"],
             "elderly": reg["total_elderly_65"],
+            # 地域・競合指標
+            "hospitals": reg["hospitals"],
+            "home_support_clinics": reg["home_support_clinics"],
+            "home_support_hospitals": reg["home_support_hospitals"],
+            "visit_clinics_est": reg["visit_clinics_est"],
+            "visit_hospitals_est": reg["visit_hospitals_est"],
+            "residential_facilities": reg["residential_facilities"],
+            "residential_beds": reg["residential_beds"],
+            "nursing_facilities": reg["nursing_facilities_all"],
+            "visit_clinics_per_100k": reg["visit_clinics_per_100k_elderly"],
+            "visit_hospitals_per_100k": reg["visit_hospitals_per_100k_elderly"],
+            "residential_fac_per_100k": reg["residential_fac_per_100k_elderly"],
+            "residential_beds_per_100k": reg["residential_beds_per_100k_elderly"],
+            "expected_fac_ratio": None,
+            "fac_ratio_gap": None,
         })
 
     # 浦和（地域分析に未登録のため簡易）
@@ -138,6 +163,26 @@ def analyze():
             "overlap": None,
             "elderly": None,
         })
+
+    # 地域施設密度と施設患者比率の相関分析
+    analyzed = [r for r in rows if r.get("residential_fac_per_100k") is not None]
+    if len(analyzed) >= 3:
+        fac_ratios = [r["fac_ratio"] for r in analyzed]
+        res_fac_d = [r["residential_fac_per_100k"] for r in analyzed]
+        res_bed_d = [r["residential_beds_per_100k"] for r in analyzed]
+        visit_hosp_d = [r["visit_hospitals_per_100k"] for r in analyzed]
+
+        corr_fac_res = pearson(fac_ratios, res_fac_d)
+        corr_fac_beds = pearson(fac_ratios, res_bed_d)
+        corr_fac_vhosp = pearson(fac_ratios, visit_hosp_d)
+
+        # 入所定員ベースの期待施設患者比率（粗い推計）
+        group_fac_ratio = sum(r["facility"] for r in analyzed) / sum(r["total"] for r in analyzed) * 100
+        for r in analyzed:
+            # 地域の入所系施設密度が高いほど施設患者が増える構造を正規化
+            avg_bed = sum(res_bed_d) / len(res_bed_d)
+            r["expected_fac_ratio"] = min(95, max(15, group_fac_ratio * (r["residential_beds_per_100k"] / avg_bed)))
+            r["fac_ratio_gap"] = r["fac_ratio"] - r["expected_fac_ratio"]
 
     rows.sort(key=lambda x: x.get("performance_score") or 0, reverse=True)
 
@@ -177,6 +222,67 @@ def analyze():
         f"{group_fac/group_total*100:>5.0f}% {group_fte:>5.0f} {group_total/group_fte:>8.0f} "
         f"{group_weighted/group_fte:>12.0f}"
     )
+    lines.append("")
+
+    # === 競合・病院・施設密度分析 ===
+    lines.append("=" * 100)
+    lines.append("■ 地域競合環境（8km圏内推計）")
+    lines.append("-" * 100)
+    chdr = (
+        f"{'院名':<14} {'病院':>5} {'訪問実施':>8} {'在宅支援':>8} {'訪問診療':>8} "
+        f"{'入所施設':>8} {'入所定員':>8} {'訪問診/10万':>10} {'入所施設/10万':>12}"
+    )
+    lines.append(chdr)
+    lines.append("-" * 100)
+    for r in sorted(analyzed, key=lambda x: x["visit_clinics_est"], reverse=True):
+        lines.append(
+            f"{r['key']:<14} {r['hospitals']:>5} {r['visit_hospitals_est']:>8} "
+            f"{r['home_support_clinics']:>8} {r['visit_clinics_est']:>8} "
+            f"{r['residential_facilities']:>8.0f} {r['residential_beds']:>8.0f} "
+            f"{r['visit_clinics_per_100k']:>10.0f} {r['residential_fac_per_100k']:>12.0f}"
+        )
+    lines.append("  ※訪問実施病院=在宅支援病院+一般病院×25% / 訪問診療=一般診療所×20.5%（厚労省推計）")
+    lines.append("  ※在宅支援=在宅療養支援診療所（直接競合） / 入所施設=入所型+特定施設（JMAP）")
+    lines.append("")
+
+    lines.append("■ 地域施設密度と施設患者比率の関係")
+    if len(analyzed) >= 3:
+        lines.append(f"  相関係数（施設患者% vs 入所施設密度/10万高齢者）: r = {corr_fac_res:+.2f}")
+        lines.append(f"  相関係数（施設患者% vs 入所定員/10万高齢者）    : r = {corr_fac_beds:+.2f}")
+        lines.append(f"  相関係数（施設患者% vs 訪問実施病院/10万高齢者）: r = {corr_fac_vhosp:+.2f}")
+        lines.append("")
+        if corr_fac_beds >= 0.5:
+            lines.append("  → 入所系施設が多い地域ほど施設患者比率が高くなる傾向が強い（地域構造が患者ミックスを規定）")
+        elif corr_fac_beds >= 0.3:
+            lines.append("  → 施設患者比率は地域の入所施設密度と正の相関あり。院間差の一部は地域で説明可能")
+        else:
+            lines.append("  → 施設密度だけでは説明しきれない差あり。営業戦略・施設契約の差が影響")
+        lines.append("")
+
+        lines.append(f"  {'院名':<14} {'実施設%':>8} {'期待施設%':>10} {'差(実-期)':>10} {'入所定員/10万':>12} 解釈")
+        lines.append("  " + "-" * 78)
+        for r in sorted(analyzed, key=lambda x: x.get("fac_ratio_gap") or 0, reverse=True):
+            gap = r.get("fac_ratio_gap")
+            if gap is None:
+                continue
+            if gap > 10:
+                note = "地域より施設偏重（施設営業が強い）"
+            elif gap < -10:
+                note = "地域より居宅偏重（施設余地あり or 獲得弱）"
+            else:
+                note = "地域構造と整合"
+            lines.append(
+                f"  {r['key']:<14} {r['fac_ratio']:>7.0f}% {r['expected_fac_ratio']:>9.0f}% "
+                f"{gap:>+9.0f}pt {r['residential_beds_per_100k']:>12.0f} {note}"
+            )
+        lines.append("")
+
+    lines.append("■ ライバル訪問診療クリニック密度と獲得の関係")
+    for r in sorted(analyzed, key=lambda x: x["home_share"] or 0, reverse=True):
+        lines.append(
+            f"  {r['key']}: 在宅支援診{r['home_support_clinics']} / 訪問診療推計{r['visit_clinics_est']} / "
+            f"居宅シェア{r['home_share']:.1f}% / 施設{r['fac_ratio']:.0f}%"
+        )
     lines.append("")
 
     # 解釈セクション
