@@ -21,7 +21,28 @@ from wakasa_clinic_regional_analysis import CLINICS, calculate_catchment_metrics
 
 CONF_DIR = Path(__file__).parent / "confidential"
 DATA_FILE = CONF_DIR / "operational_data.yaml"
+OPENING_DATES_FILE = Path(__file__).parent / "clinic_opening_dates.yaml"
 OUTPUT_FILE = CONF_DIR / "performance_report.txt"
+
+
+def load_opening_dates():
+    with open(OPENING_DATES_FILE, encoding="utf-8") as f:
+        return yaml.safe_load(f)
+
+
+def opening_year(key: str, meta: dict) -> int:
+    raw = meta.get(key, {}).get("開設", "")
+    if isinstance(raw, int):
+        return raw
+    s = str(raw)
+    return int(s[:4]) if s else 0
+
+
+def strategic_era(key: str, eras: dict) -> str:
+    for era, info in eras.items():
+        if key in info.get("branches", []):
+            return era
+    return "未分類"
 
 
 def pearson(xs, ys):
@@ -48,6 +69,8 @@ def load_ops():
 
 def analyze():
     ops = load_ops()
+    opening_meta = load_opening_dates()
+    eras = opening_meta.get("strategic_eras", {})
     physicians = ops["physicians_fte"]
     patients = ops["patients"]
     w_home = ops["revenue_weight"]["home"]
@@ -135,6 +158,9 @@ def analyze():
             "residential_beds_per_100k": reg["residential_beds_per_100k_elderly"],
             "expected_fac_ratio": None,
             "fac_ratio_gap": None,
+            "opening_year": opening_year(key, opening_meta),
+            "strategic_era": strategic_era(key, eras),
+            "years_open": 2026 - opening_year(key, opening_meta) if opening_year(key, opening_meta) else None,
         })
 
     # 浦和（地域分析に未登録のため簡易）
@@ -222,6 +248,56 @@ def analyze():
         f"{group_fac/group_total*100:>5.0f}% {group_fte:>5.0f} {group_total/group_fte:>8.0f} "
         f"{group_weighted/group_fte:>12.0f}"
     )
+    lines.append("")
+
+    # === 開院時期・戦略世代分析 ===
+    lines.append("=" * 100)
+    lines.append("■ 開院時期と居宅/施設ミックス（公式開院日ベース）")
+    lines.append("-" * 100)
+    lines.append(
+        f"  {'院名':<14} {'開院':>8} {'戦略世代':<12} {'施設%':>6} {'居宅%':>6} "
+        f"{'収益指数':>8} {'解釈'}"
+    )
+    lines.append("-" * 100)
+    era_groups = {}
+    for r in sorted(analyzed, key=lambda x: x["opening_year"]):
+        era = r["strategic_era"]
+        era_groups.setdefault(era, []).append(r["fac_ratio"])
+        note = ""
+        if era == "施設重視期":
+            note = "施設契約蓄積型"
+        elif r["key"] in ("府中", "調布"):
+            note = "転換期第1弾・居宅寄り"
+        elif r["key"] == "津田沼":
+            note = "居宅最優先モデル"
+        elif r["key"] == "三軒茶屋":
+            note = "事業譲渡・施設継承"
+        elif r["key"] in ("リーフシティ市川", "浦和針ヶ谷"):
+            note = "オウカス併設・立ち上げ期"
+        lines.append(
+            f"  {r['key']:<14} {r['opening_year']:>8} {era:<12} "
+            f"{r['fac_ratio']:>5.0f}% {100-r['fac_ratio']:>5.0f}% "
+            f"{r['rev_index_per_fte']:>8.0f} {note}"
+        )
+    lines.append("")
+    for era, ratios in era_groups.items():
+        avg = sum(ratios) / len(ratios)
+        lines.append(f"  【{era}】平均施設患者比率: {avg:.0f}%（{len(ratios)}院）")
+    if len(analyzed) >= 3:
+        years = [r["opening_year"] for r in analyzed]
+        facs = [r["fac_ratio"] for r in analyzed]
+        corr_year_fac = pearson(years, facs)
+        lines.append(f"  開院年と施設患者%の相関: r = {corr_year_fac:+.2f}")
+        if corr_year_fac < -0.4:
+            lines.append("  → 新しい院ほど居宅比重が高い傾向（ご指摘の戦略転換と一致）")
+        elif corr_year_fac > 0.4:
+            lines.append("  → 開院が新しい院ほど施設比率が高い（地域・譲渡等の影響が大きい）")
+    lines.append("")
+    lines.append("  主要マイルストーン:")
+    lines.append("  ・2000年 本院開設 / 2014年 在宅医療部門開設（施設診療の蓄積期）")
+    lines.append("  ・2021-2022年 所沢・石神井・ひばりが丘・三鷹（多摩拡大・施設重視モデル）")
+    lines.append("  ・2023年4月 府中・調布開院＝令和5年度診療報酬改定と同月・居宅重視へ転換")
+    lines.append("  ・2024年4月 津田沼（居宅71%）/ 2025-2026年 23区・千葉・浦和の拡大")
     lines.append("")
 
     # === 競合・病院・施設密度分析 ===
