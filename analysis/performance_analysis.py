@@ -62,13 +62,9 @@ def analyze():
         fac_ratio = fac / total * 100 if total else 0
 
         fte = physicians.get(key)
-        fte_ref = fte  # 実数
         if fte is None:
-            # 高円寺：同タイプ院（23区・医師1名クラス）の参考として1.0で sensitivity のみ
-            fte = 1.0
-            fte_note = "※未提供のため1.0仮置き"
-        else:
-            fte_note = ""
+            raise ValueError(f"医師数未設定: {key}")
+        fte_note = ""
 
         weighted = home * w_home + fac * w_fac
         rev_index_per_fte = weighted / fte if fte else 0
@@ -97,7 +93,7 @@ def analyze():
             "key": key,
             "home": home, "facility": fac, "total": total,
             "fac_ratio": fac_ratio,
-            "fte": fte_ref if fte_ref is not None else None,
+            "fte": fte,
             "fte_used": fte,
             "fte_note": fte_note,
             "weighted": weighted,
@@ -159,7 +155,7 @@ def analyze():
 
     group_home = group_fac = group_total = group_weighted = group_fte = 0
     for r in rows:
-        fte_disp = f"{r['fte']:.1f}" if r['fte'] is not None else f"{r['fte_used']:.1f}?"
+        fte_disp = f"{r['fte']:.1f}"
         share_disp = f"{r['home_share']:.1f}%" if r['home_share'] is not None else "  n/a"
         effort_disp = f"{r['effort_index']:.0f}" if r['effort_index'] is not None else "  n/a"
         perf_disp = f"{r['performance_score']:.0f}" if r['performance_score'] is not None else "  n/a"
@@ -168,7 +164,7 @@ def analyze():
             f"{r['fac_ratio']:>5.0f}% {fte_disp:>5} {r['patients_per_fte']:>8.0f} "
             f"{r['rev_index_per_fte']:>12.0f} {share_disp:>8} {effort_disp:>8} {perf_disp:>8}"
         )
-        if r['fte'] is not None:
+        if r['fte'] is not None and r['key'] != '浦和針ヶ谷':
             group_home += r['home']
             group_fac += r['facility']
             group_total += r['total']
@@ -230,7 +226,7 @@ def analyze():
     lines.append("  1. 本院・所沢は患者/医師・居宅シェアとも最高水準 → 「努力不足」評価は不適切")
     lines.append("  2. 津田沼は施設70%超・患者475人/2医師 → 数量は良いが収益指数は施設ミックスで中位")
     lines.append("  3. 西日暮里・市川・浦和は医師1名体制で母数小 → 地域規模との比較で必ず最下位群")
-    lines.append("  4. 高円寺は医師数未確定のため生産性評価保留（患者250人は23区としては低いが競合最多地域）")
+    lines.append("  4. 高円寺は医師1名・患者250人・収益指数216 → 三軒茶屋と同型の高効率1医師体制")
     lines.append("  5. 調布は施設54%で患者325人/1.5医師=217/医師 → 多摩で高効率")
     lines.append("")
 
