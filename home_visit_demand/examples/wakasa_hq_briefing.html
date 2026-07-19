@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <title>わかさクリニック 訪問診療地域推計 成果資料（2026-07）</title>
 <style>
 :root {
@@ -12,68 +12,100 @@
   --muted: #5c6572;
   --line: #d6d0c3;
   --accent: #0f5c4c;
-  --warn: #8a3b12;
   --serif: "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", serif;
-  --sans: "IBM Plex Sans JP", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  --sans: "Hiragino Sans", "Noto Sans JP", "IBM Plex Sans JP", sans-serif;
 }
 * { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
 body {
-  margin: 0; color: var(--ink); font-family: var(--sans); line-height: 1.6;
+  margin: 0; color: var(--ink); font-family: var(--sans); line-height: 1.65;
   background:
     radial-gradient(1000px 500px at 0% 0%, #e5eee8 0%, transparent 55%),
     radial-gradient(800px 400px at 100% 10%, #efe4d6 0%, transparent 50%),
     var(--bg);
 }
-.wrap { max-width: 980px; margin: 0 auto; padding: 2rem 1.2rem 3.5rem; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 1.2rem 1rem 3rem; }
 header {
-  padding: 1.8rem 1.4rem; background: var(--card); border: 1px solid var(--line);
-  border-radius: 16px; margin-bottom: 1.2rem;
+  padding: 1.4rem 1.1rem; background: var(--card); border: 1px solid var(--line);
+  border-radius: 16px; margin-bottom: 1rem;
 }
 header .brand {
-  font-family: var(--serif); color: var(--accent); font-size: clamp(1.7rem, 3.5vw, 2.4rem);
+  font-family: var(--serif); color: var(--accent);
+  font-size: clamp(1.55rem, 6vw, 2.3rem);
   margin: 0 0 .35rem; letter-spacing: .02em;
 }
-header h1 { margin: 0; font-size: 1.15rem; font-weight: 600; }
-header p { margin: .45rem 0 0; color: var(--muted); }
-.meta { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .9rem; }
+header h1 { margin: 0; font-size: 1.05rem; font-weight: 600; }
+header p { margin: .45rem 0 0; color: var(--muted); font-size: .95rem; }
+.meta { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .85rem; }
 .pill {
   border: 1px solid var(--line); background: #f7f4ec; border-radius: 999px;
-  padding: .2rem .7rem; font-size: .82rem; color: var(--muted);
+  padding: .25rem .7rem; font-size: .78rem; color: var(--muted);
+}
+.tip {
+  margin-top: .85rem; padding: .7rem .85rem; border-radius: 10px;
+  background: #eef5f1; border: 1px solid #c9ddd4; font-size: .88rem; color: #345;
 }
 section {
   background: var(--card); border: 1px solid var(--line); border-radius: 14px;
-  padding: 1.1rem 1.2rem 1.25rem; margin: 0 0 1rem;
+  padding: 1rem 1rem 1.15rem; margin: 0 0 .9rem;
 }
 h2 {
-  font-family: var(--serif); color: var(--accent); font-size: 1.2rem;
+  font-family: var(--serif); color: var(--accent); font-size: 1.15rem;
   margin: 0 0 .7rem; border-bottom: 1px solid var(--line); padding-bottom: .35rem;
 }
 h3 { margin: 1rem 0 .4rem; font-size: 1rem; }
 table { width: 100%; border-collapse: collapse; font-size: .86rem; }
-th, td { padding: .4rem .35rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+th, td { padding: .45rem .35rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
 th { color: var(--muted); font-size: .75rem; font-weight: 600; }
 td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .above { color: #1f6b3a; font-weight: 600; }
 .below { color: #8f1d1d; font-weight: 600; }
-.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: .7rem; }
-.kpi { background: #f7f4ec; border: 1px solid var(--line); border-radius: 12px; padding: .8rem; }
-.kpi .l { font-size: .75rem; color: var(--muted); }
-.kpi .v { font-family: var(--serif); font-size: 1.35rem; margin-top: .15rem; }
+.kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: .65rem; }
+@media (min-width: 720px) {
+  .kpis { grid-template-columns: repeat(4, 1fr); }
+}
+.kpi { background: #f7f4ec; border: 1px solid var(--line); border-radius: 12px; padding: .75rem; }
+.kpi .l { font-size: .72rem; color: var(--muted); }
+.kpi .v { font-family: var(--serif); font-size: 1.25rem; margin-top: .15rem; }
 ul { margin: .3rem 0 0; padding-left: 1.15rem; }
-li { margin: .2rem 0; }
+li { margin: .25rem 0; }
 .note { color: var(--muted); font-size: .88rem; }
 .msg {
   background: #e8f2ee; border: 1px solid #c5ddd4; border-radius: 12px;
-  padding: .9rem 1rem; margin-top: .6rem;
+  padding: .85rem 1rem; margin-top: .5rem;
 }
 .msg ol { margin: .3rem 0 0; padding-left: 1.2rem; }
-.files a { color: var(--accent); }
+.msg li { margin: .35rem 0; }
+pre {
+  background:#f7f4ec; padding:.8rem; border-radius:8px; overflow:auto;
+  font-size:.8rem; white-space: pre-wrap; word-break: break-all;
+}
+code { font-size: .84em; word-break: break-all; }
+
+/* スマホ: 広い表はカード化 */
+.desktop-only { display: none; }
+.mobile-cards { display: grid; gap: .7rem; }
+.card {
+  border: 1px solid var(--line); border-radius: 12px; padding: .75rem .85rem;
+  background: #fbfaf6;
+}
+.card .name { font-weight: 700; font-size: 1.02rem; margin-bottom: .45rem; }
+.card .rows { display: grid; grid-template-columns: 1fr 1fr; gap: .25rem .6rem; font-size: .88rem; }
+.card .k { color: var(--muted); font-size: .75rem; }
+.card .full { grid-column: 1 / -1; margin-top: .25rem; padding-top: .35rem; border-top: 1px dashed var(--line); }
+
+@media (min-width: 860px) {
+  .desktop-only { display: table; }
+  .mobile-cards { display: none; }
+  .wrap { padding: 2rem 1.2rem 3.5rem; }
+  header { padding: 1.8rem 1.4rem; }
+}
+
 @media print {
   body { background: #fff; }
-  section, header { break-inside: avoid; box-shadow: none; }
-}
-@media (max-width: 700px) {
-  table { display: block; overflow-x: auto; }
+  .tip { display: none; }
+  .mobile-cards { display: none !important; }
+  .desktop-only { display: table !important; }
 }
 </style>
 </head>
@@ -86,9 +118,10 @@ li { margin: .2rem 0; }
   <div class="meta">
     <span class="pill">実績基準: 2026-07</span>
     <span class="pill">標準半径: 8 km</span>
-    <span class="pill">在支診: 関東信越厚生局 R8.6.1</span>
+    <span class="pill">在支診: 関東信越厚生局</span>
     <span class="pill">対象: 13院</span>
   </div>
+  <div class="tip">スマホ向けに表をカード表示にしています。横に長い表はPC向けです。</div>
 </header>
 
 <section>
@@ -104,7 +137,15 @@ li { margin: .2rem 0; }
 
 <section>
   <h2>2. 指標の定義</h2>
-  <table>
+  <div class="mobile-cards">
+    <div class="card"><div class="name">居宅市場規模</div><div>半径圏の居宅需要（他院含む）。ポテンシャルの母数。</div></div>
+    <div class="card"><div class="name">居宅獲得率</div><div>実績居宅 ÷ 市場規模。競争力・進捗。</div></div>
+    <div class="card"><div class="name">ユニオン市場</div><div>グループ圏域の重複除去後。グループ全体。</div></div>
+    <div class="card"><div class="name">排他的居宅市場</div><div>最寄り院メッシュの需要。院別KPI母数。</div></div>
+    <div class="card"><div class="name">在支診</div><div>厚生局届出の在宅療養支援診療所。外部競合。</div></div>
+    <div class="card"><div class="name">施設契約KPI</div><div>契約施設の実績患者。市場シェアは使わない。</div></div>
+  </div>
+  <table class="desktop-only">
     <thead><tr><th>指標</th><th>意味</th><th>使い方</th></tr></thead>
     <tbody>
       <tr><td>居宅市場規模</td><td>半径圏の居宅需要（他院含む）</td><td>ポテンシャル母数</td></tr>
@@ -119,7 +160,22 @@ li { margin: .2rem 0; }
 
 <section>
   <h2>3. 院別サマリー（8km）</h2>
-  <table>
+  <div class="mobile-cards">
+    <div class="card"><div class="name">本院 <span class="above">横展開</span></div><div class="rows"><div><div class="k">施設/居宅</div>1148 / 509</div><div><div class="k">市場居宅</div>2,269</div><div><div class="k">獲得率</div><span class="above">22.4%</span></div><div><div class="k">期待帯</div>2.25–9.6%</div><div class="full"><div class="k">判定・在支診</div>上限超 ／ 在支診 59</div></div></div>
+    <div class="card"><div class="name">所沢 <span>やる（施設偏重）</span></div><div class="rows"><div><div class="k">施設/居宅</div>611 / 205</div><div><div class="k">市場居宅</div>2,580</div><div><div class="k">獲得率</div>8.0%</div><div><div class="k">期待帯</div>2.25–9.6%</div><div class="full"><div class="k">判定・在支診</div>帯内 ／ 在支診 62</div></div></div>
+    <div class="card"><div class="name">石神井公園</div><div class="rows"><div><div class="k">施設/居宅</div>310 / 103</div><div><div class="k">市場居宅</div>12,382</div><div><div class="k">獲得率</div>0.8%</div><div><div class="k">期待帯</div>0.19–1.46%</div><div class="full"><div class="k">判定・在支診</div>帯内 ／ 在支診 263 ／ クラスター</div></div></div>
+    <div class="card"><div class="name">ひばりが丘</div><div class="rows"><div><div class="k">施設/居宅</div>393 / 122</div><div><div class="k">市場居宅</div>9,758</div><div><div class="k">獲得率</div>1.2%</div><div><div class="k">期待帯</div>0.39–2.44%</div><div class="full"><div class="k">判定・在支診</div>帯内 ／ 在支診 166 ／ クラスター</div></div></div>
+    <div class="card"><div class="name">三鷹</div><div class="rows"><div><div class="k">施設/居宅</div>187 / 85</div><div><div class="k">市場居宅</div>11,083</div><div><div class="k">獲得率</div>0.8%</div><div><div class="k">期待帯</div>0.19–1.46%</div><div class="full"><div class="k">判定・在支診</div>帯内 ／ 在支診 227 ／ クラスター</div></div></div>
+    <div class="card"><div class="name">調布</div><div class="rows"><div><div class="k">施設/居宅</div>152 / 176</div><div><div class="k">市場居宅</div>9,147</div><div><div class="k">獲得率</div>1.9%</div><div><div class="k">期待帯</div>0.39–2.44%</div><div class="full"><div class="k">判定・在支診</div>帯内 ／ 在支診 176 ／ クラスター</div></div></div>
+    <div class="card"><div class="name">府中</div><div class="rows"><div><div class="k">施設/居宅</div>281 / 162</div><div><div class="k">市場居宅</div>7,689</div><div><div class="k">獲得率</div>2.1%</div><div><div class="k">期待帯</div>0.52–3%</div><div class="full"><div class="k">判定・在支診</div>帯内 ／ 在支診 103 ／ クラスター</div></div></div>
+    <div class="card"><div class="name">三軒茶屋</div><div class="rows"><div><div class="k">施設/居宅</div>188 / 124</div><div><div class="k">市場居宅</div>13,721</div><div><div class="k">獲得率</div>0.9%</div><div><div class="k">期待帯</div>0.28–1.95%</div><div class="full"><div class="k">判定・在支診</div>帯内 ／ 在支診 428 ／ 様子見</div></div></div>
+    <div class="card"><div class="name">津田沼 <span class="above">横展開</span></div><div class="rows"><div><div class="k">施設/居宅</div>142 / 335</div><div><div class="k">市場居宅</div>2,480</div><div><div class="k">獲得率</div><span class="above">13.5%</span></div><div><div class="k">期待帯</div>2.25–9.6%</div><div class="full"><div class="k">判定・在支診</div>上限超 ／ 在支診 77</div></div></div>
+    <div class="card"><div class="name">高円寺</div><div class="rows"><div><div class="k">施設/居宅</div>172 / 80</div><div><div class="k">市場居宅</div>14,931</div><div><div class="k">獲得率</div>0.5%</div><div><div class="k">期待帯</div>0.19–1.46%</div><div class="full"><div class="k">判定・在支診</div>帯内 ／ 在支診 400 ／ クラスター</div></div></div>
+    <div class="card"><div class="name">西日暮里</div><div class="rows"><div><div class="k">施設/居宅</div>35 / 95</div><div><div class="k">市場居宅</div>14,824</div><div><div class="k">獲得率</div>0.6%</div><div><div class="k">期待帯</div>0.28–1.95%</div><div class="full"><div class="k">判定・在支診</div>帯内 ／ 在支診 384 ／ 様子見</div></div></div>
+    <div class="card"><div class="name">市川 <span class="below">やる（高）</span></div><div class="rows"><div><div class="k">施設/居宅</div>45 / 59</div><div><div class="k">市場居宅</div>8,410</div><div><div class="k">獲得率</div><span class="below">0.7%</span></div><div><div class="k">期待帯</div>0.75–4%</div><div class="full"><div class="k">判定・在支診</div>下回る ／ 在支診 136</div></div></div>
+    <div class="card"><div class="name">浦和</div><div class="rows"><div><div class="k">施設/居宅</div>0 / 14</div><div><div class="k">市場居宅</div>2,448</div><div><div class="k">獲得率</div>0.6%</div><div><div class="k">期待帯</div>2.25–9.6%</div><div class="full"><div class="k">判定・在支診</div>経過観察 ／ 在支診 125 ／ 様子見</div></div></div>
+  </div>
+  <table class="desktop-only">
     <thead>
       <tr>
         <th>院</th><th>施設</th><th>居宅</th><th>市場居宅</th><th>獲得率</th>
@@ -160,21 +216,20 @@ li { margin: .2rem 0; }
 
 <section>
   <h2>5. 関連資料</h2>
-  <ul class="files">
-    <li><code>docs/HQ_BRIEFING_2026-07.md</code> … 本資料のMarkdown版</li>
-    <li><code>examples/wakasa_hq_dashboard.html</code> … 定例ダッシュボード</li>
-    <li><code>examples/wakasa_action_sheets.txt</code> … 院別アクションシート</li>
-    <li><code>examples/mitaka_cluster_ownership_map.html</code> … 主担当マップ</li>
-    <li><code>examples/urawa_ramp_tracking.html</code> … 浦和軌跡</li>
-    <li><code>docs/HQ_OPERATING_RULES.md</code> … 正式運用ルール</li>
-    <li><code>examples/wakasa_hq_pipeline_report.txt</code> … 統合レポート全文</li>
+  <ul>
+    <li><code>docs/HQ_BRIEFING_2026-07.md</code></li>
+    <li><code>examples/wakasa_hq_dashboard.html</code></li>
+    <li><code>examples/wakasa_action_sheets.txt</code></li>
+    <li><code>examples/mitaka_cluster_ownership_map.html</code></li>
+    <li><code>examples/urawa_ramp_tracking.html</code></li>
+    <li><code>docs/HQ_OPERATING_RULES.md</code></li>
   </ul>
   <h3>再実行</h3>
-  <pre style="background:#f7f4ec;padding:.8rem;border-radius:8px;overflow:auto;font-size:.85rem">cd home_visit_demand
+  <pre>cd home_visit_demand
 PYTHONPATH=src python3 scripts/run_hq_pipeline.py</pre>
 </section>
 
-<p class="note">作成: home_visit_demand エンジン ／ 印刷時はこのページをPDF化できます。</p>
+<p class="note">作成: home_visit_demand エンジン ／ このページはスマホでも閲覧できます。</p>
 </div>
 </body>
 </html>
