@@ -1175,5 +1175,23 @@
     "home_support_hospitals": 14,
     "source": "JMAP区合計",
     "note": "中央・花見川・稲毛・若葉・緑・美浜の合計"
+  },
+  "川口市": {
+    "home_support_clinics": null,
+    "home_support_hospitals": null,
+    "jis_code": "11203",
+    "source": "JIS stub for facility scrape"
+  },
+  "戸田市": {
+    "home_support_clinics": null,
+    "home_support_hospitals": null,
+    "jis_code": "11224",
+    "source": "JIS stub for facility scrape"
+  },
+  "蕨市": {
+    "home_support_clinics": null,
+    "home_support_hospitals": null,
+    "jis_code": "11223",
+    "source": "JIS stub for facility scrape"
   }
 }

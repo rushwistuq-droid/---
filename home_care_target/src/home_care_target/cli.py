@@ -166,7 +166,37 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="施設点を使わず市区町村合算のみ",
     )
+    parser.add_argument(
+        "--compare-actuals",
+        action="store_true",
+        help="機密実績YAMLがあれば取得KPIとの差分サマリを出す（生実績はconfidentialのみ）",
+    )
     args = parser.parse_args(argv)
+    if args.compare_actuals:
+        from home_care_target.actuals_compare import (
+            compare_actuals_to_kpi,
+            rows_to_public_summary,
+        )
+
+        try:
+            rows = compare_actuals_to_kpi()
+        except FileNotFoundError as e:
+            print(f"実績ファイルなし: {e}")
+            return 1
+        pub = rows_to_public_summary(rows)
+        if args.json:
+            print(json.dumps(pub, ensure_ascii=False, indent=2))
+        else:
+            print("実績 vs 獲得KPI（公開サマリ・生実績人数は非表示）")
+            for c in pub["clinics"]:
+                short = c["clinic"].replace("わかさクリニック", "")
+                print(
+                    f"  {short:<14} target={c['acquisition_target_home']:>3} "
+                    f"band={c['attainment_band']} gap={c['gap_vs_target_sign']} "
+                    f"競合={c['competition_label']}"
+                )
+            print("band_counts:", pub["band_counts"])
+        return 0
     return run_demo(as_json=args.json, prefer_points=not args.municipal_only)
 
 
