@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""実績 vs 取得KPI 比較を実行する。"""
+"""実績 vs 実務KPI 比較を実行する。"""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ from home_care_target.actuals_compare import (  # noqa: E402
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="Compare actual patients to acquisition KPI")
+    p = argparse.ArgumentParser(description="Compare actual patients to operational KPI")
     p.add_argument(
         "--actuals",
         type=Path,
@@ -45,13 +45,11 @@ def main() -> int:
     args.public_out.parent.mkdir(parents=True, exist_ok=True)
     args.public_out.write_text(json.dumps(public, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    # Console: short names + gaps (includes actuals — for local ops only)
-    print(f"{'院':<12} {'実績居宅':>8} {'目標':>6} {'差':>6} {'達成率':>8} {'競合':<18} {''}")
+    print(f"{'院':<12} {'実績':>6} {'実務KPI':>7} {'差':>6} {'帯':<8} {'状態'}")
     for r in rows:
         print(
-            f"{r.alias:<12} {r.actual_home:>8} {r.acquisition_target_home:>6} "
-            f"{r.gap_vs_target:>+6} {r.attainment_vs_target:>7.0%} "
-            f"{r.competition_label:<18} {r.note}"
+            f"{r.alias:<12} {r.actual_home:>6} {r.operational_kpi:>7} "
+            f"{r.gap_vs_operational:>+6} {(r.home_mix_band or '-'):<8} {r.status}"
         )
     print(f"\nconfidential -> {args.confidential_out}")
     print(f"public summary -> {args.public_out}")

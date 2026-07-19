@@ -1,4 +1,4 @@
-"""院別アクション設計: KPIギャップ → 月次新規・紹介経路。"""
+"""院別アクション設計: 実務KPI・居宅シフト・紹介経路実績。"""
 
 from __future__ import annotations
 
@@ -9,30 +9,31 @@ from typing import Any, Dict, List, Optional
 
 from .actuals_compare import load_actuals
 from .pipeline import ClinicAnalysis, analyze_all_wakasa
+from .referral import CHANNEL_LABELS, load_referral_funnel, resolve_referral
 
 
 REFERRAL_PLAYBOOK = {
     "低（獲得しやすい）": [
-        {"channel": "居宅介護支援（CM）", "share": 0.45, "note": "新規開拓の主戦場。未取引事業所のリスト化"},
-        {"channel": "病院退院調整", "share": 0.35, "note": "近隣病院の地域連携室へ定期訪問"},
-        {"channel": "訪問看護", "share": 0.20, "note": "看護→医師の紹介ルートを月次KPI化"},
+        {"channel": "居宅介護支援（CM）", "share": 0.45, "note": "新規開拓の主戦場"},
+        {"channel": "病院退院調整", "share": 0.35, "note": "地域連携室へ定期訪問"},
+        {"channel": "訪問看護", "share": 0.20, "note": "看護→医師ルートをKPI化"},
     ],
     "中": [
-        {"channel": "居宅介護支援（CM）", "share": 0.40, "note": "既存CMの深度＋新規の選択と集中"},
+        {"channel": "居宅介護支援（CM）", "share": 0.40, "note": "既存深度＋新規の選択と集中"},
         {"channel": "病院退院調整", "share": 0.35, "note": "退院時許諾の獲得率を追跡"},
-        {"channel": "訪問看護", "share": 0.25, "note": "グループ訪看との本院水準連携"},
+        {"channel": "訪問看護", "share": 0.25, "note": "グループ訪看連携"},
     ],
     "高": [
-        {"channel": "居宅介護支援（CM）", "share": 0.35, "note": "施設偏重から居宅CMへシフト"},
-        {"channel": "病院退院調整", "share": 0.30, "note": "グループ内エリア分担を明確化"},
+        {"channel": "居宅介護支援（CM）", "share": 0.35, "note": "施設偏重から居宅CMへ"},
+        {"channel": "病院退院調整", "share": 0.30, "note": "グループ内エリア分担"},
         {"channel": "訪問看護", "share": 0.25, "note": "紹介元の質を優先"},
-        {"channel": "自院外来・施設転換", "share": 0.10, "note": "施設患者の居宅移行・外来からの在宅化"},
+        {"channel": "自院外来・施設転換", "share": 0.10, "note": "施設→居宅・外来在宅化"},
     ],
     "非常に高（シェア拡大が難しい）": [
-        {"channel": "居宅介護支援（CM）", "share": 0.30, "note": "高単価・重症寄りに絞る"},
-        {"channel": "病院退院調整", "share": 0.25, "note": "特定病院との固定ルート"},
+        {"channel": "居宅介護支援（CM）", "share": 0.30, "note": "重症寄りに絞る"},
+        {"channel": "病院退院調整", "share": 0.25, "note": "特定病院の固定ルート"},
         {"channel": "訪問看護", "share": 0.25, "note": "既存連携の維持"},
-        {"channel": "自院外来・施設転換", "share": 0.20, "note": "奪い合いより自院パイプライン"},
+        {"channel": "自院外来・施設転換", "share": 0.20, "note": "自院パイプライン"},
     ],
 }
 
@@ -44,17 +45,19 @@ class ClinicActionPlan:
     priority: int
     competition_label: str
     actual_home: Optional[int]
-    kpi_target: int
-    kpi_floor: int
-    kpi_stretch: int
-    gap_to_target: Optional[int]
-    gap_to_stretch: Optional[int]
+    operational_kpi: int
+    fair_share_kpi: int
+    gap_to_operational: Optional[int]
     months: int
-    monthly_new_to_target: Optional[float]
-    monthly_new_to_stretch: Optional[float]
+    monthly_new_to_operational: Optional[float]
+    home_mix_band: Optional[str]
+    home_shift_gap: Optional[int]
     status: str
+    referral_source: str
     referral_mix: List[Dict[str, Any]]
+    referral_monthly_by_channel: Dict[str, float]
     actions: List[str]
+    ignore_for_priority: bool = False
 
 
 def _playbook_key(label: str) -> str:
@@ -67,15 +70,22 @@ def _playbook_key(label: str) -> str:
     return "中"
 
 
-def _priority_score(home: Optional[int], floor: int, target: int, stretch: int) -> int:
+def _priority_score(
+    *,
+    ignore: bool,
+    home: Optional[int],
+    op: int,
+    mix_band: Optional[str],
+    shift_gap: Optional[int],
+) -> int:
+    if ignore:
+        return -1000
     if home is None:
         return 50
-    if home < floor:
-        return 1000 + (floor - home)
-    if home < target:
-        return 500 + (target - home)
-    if home < stretch:
-        return 100
+    if mix_band == "施設偏重" and shift_gap and shift_gap > 0:
+        return 800 + shift_gap
+    if home < op:
+        return 500 + (op - home)
     return 10
 
 
@@ -85,57 +95,97 @@ def build_action_plans(
     months: int = 12,
     actuals_path: Optional[Path] = None,
 ) -> List[ClinicActionPlan]:
-    analyses = analyses or analyze_all_wakasa()
     try:
         actuals = load_actuals(actuals_path)
     except FileNotFoundError:
         actuals = {}
+    analyses = analyses or analyze_all_wakasa(actuals=actuals)
+    funnel = load_referral_funnel()
 
     drafts: List[tuple[int, ClinicActionPlan]] = []
     for a in analyses:
         act = actuals.get(a.clinic)
         home = int(act["home"]) if act else None
-        target = a.kpi_target_home
-        floor = a.acquisition.acquisition_floor_home
-        stretch = a.acquisition.acquisition_stretch_home
-        gap_t = (home - target) if home is not None else None
-        gap_s = (home - stretch) if home is not None else None
+        g = a.growth
+        op = a.operational_kpi_home
+        ignore = bool(g.ignore_for_priority) if g else False
+        mix_band = g.home_mix.band if g and g.home_mix else None
+        shift_gap = g.home_mix.shift_gap_to_target if g and g.home_mix else None
 
-        if home is None:
+        if ignore:
+            status = "開院初期（優先対象外）"
+            monthly = 0.0
+        elif home is None:
             status = "実績未登録"
-            monthly_t = monthly_s = None
-        elif home >= stretch:
-            status = "stretch以上（維持・質向上）"
-            monthly_t = monthly_s = 0.0
-        elif home >= target:
-            status = "目標達成（伸長挑戦）"
-            monthly_t = 0.0
-            monthly_s = max(0.0, (stretch - home) / months)
-        elif home >= floor:
-            status = "フロア以上・目標未達"
-            monthly_t = max(0.0, (target - home) / months)
-            monthly_s = max(0.0, (stretch - home) / months)
+            monthly = None
+        elif mix_band == "施設偏重" and shift_gap and shift_gap > 0:
+            status = "居宅シフト要"
+            monthly = shift_gap / months
+        elif home < op:
+            status = "実務KPI未達"
+            monthly = (op - home) / months
+        elif home >= (g.operational_stretch_home if g else op):
+            status = "伸長以上（維持・質）"
+            monthly = 0.0
         else:
-            status = "フロア未達（優先獲得）"
-            monthly_t = max(0.0, (target - home) / months)
-            monthly_s = max(0.0, (stretch - home) / months)
+            status = "実務KPI達成（伸長任意）"
+            stretch = g.operational_stretch_home if g else op
+            monthly = max(0.0, (stretch - home) / months)
 
-        mix = REFERRAL_PLAYBOOK[_playbook_key(a.acquisition.competition_label)]
+        playbook = REFERRAL_PLAYBOOK[_playbook_key(a.acquisition.competition_label)]
+        # 施設偏重はCM/自院転換を厚く
+        if mix_band == "施設偏重":
+            playbook = [
+                {"channel": "居宅介護支援（CM）", "share": 0.45, "note": "居宅シフトの主戦場"},
+                {"channel": "自院外来・施設転換", "share": 0.25, "note": "施設患者の居宅移行"},
+                {"channel": "病院退院調整", "share": 0.20, "note": "退院→居宅"},
+                {"channel": "訪問看護", "share": 0.10, "note": "居宅継続の受け皿"},
+            ]
+
+        ref = resolve_referral(
+            a.clinic,
+            a.alias,
+            monthly_new_needed=monthly or 0.0,
+            playbook=playbook,
+            funnel=funnel,
+        )
+        # monthly quotas for display
+        if ref.source == "actual" and ref.window_months:
+            monthly_by = {
+                k: round(v / ref.window_months, 2) for k, v in ref.by_channel.items()
+            }
+        else:
+            monthly_by = {k: float(v) for k, v in ref.by_channel.items()}
+
         actions: List[str] = []
-        if status.startswith("フロア未達"):
-            actions.append(f"今後{months}ヶ月で月平均{monthly_t:.1f}人の居宅新規が必要（目標到達）")
-            actions.append("未取引CM事業所の開拓リストを週次で回す")
-            actions.append("近隣病院の地域連携室へ定期訪問し退院時許諾をKPI化")
-        elif status.startswith("フロア以上"):
-            actions.append(f"月平均{monthly_t:.1f}人の新規で獲得KPI到達")
-            actions.append("紹介経路の構成比をプレイブックに寄せる（施設偏重の是正）")
-        elif status.startswith("目標達成"):
-            actions.append(f"伸長まで月平均{monthly_s:.1f}人（任意）")
-            actions.append("既存パイプラインの質（重症・継続）を優先")
+        if ignore:
+            actions.append("開院初期のため優先リスト対象外（モニタリングのみ）")
+        elif status == "居宅シフト要":
+            actions.append(
+                f"居宅比を目標まで上げるため、{months}ヶ月で月平均{monthly:.1f}人の居宅純増"
+            )
+            actions.append("施設偏重の紹介元を見直し、居宅CM比率を引き上げる")
+        elif status == "実務KPI未達":
+            actions.append(f"実務KPI {op} まで月平均{monthly:.1f}人の居宅新規")
+        elif status.startswith("実務KPI達成"):
+            actions.append("実務KPI達成。伸長は任意、紹介元の質を優先")
         else:
-            actions.append("獲得KPIは超過済み。維持と紹介元の質、グループ内重複の整理")
+            actions.append("伸長超過。維持とグループ内重複整理")
 
-        if a.acquisition.competition_label.startswith("高"):
+        if ref.source == "actual":
+            actions.extend(ref.notes)
+        else:
+            actions.append(ref.notes[0])
+            # show channel quotas
+            parts = [
+                f"{CHANNEL_LABELS[k]} {v:.1f}"
+                for k, v in monthly_by.items()
+                if v and (monthly or 0) > 0
+            ]
+            if parts:
+                actions.append("月次チャネル割当: " + " / ".join(parts))
+
+        if a.acquisition.competition_label.startswith("高") and not ignore:
             actions.append("16km圏の自グループ院と退院調整・CMエリアを分担")
 
         plan = ClinicActionPlan(
@@ -144,19 +194,32 @@ def build_action_plans(
             priority=0,
             competition_label=a.acquisition.competition_label,
             actual_home=home,
-            kpi_target=target,
-            kpi_floor=floor,
-            kpi_stretch=stretch,
-            gap_to_target=gap_t,
-            gap_to_stretch=gap_s,
+            operational_kpi=op,
+            fair_share_kpi=a.kpi_target_home,
+            gap_to_operational=(home - op) if home is not None else None,
             months=months,
-            monthly_new_to_target=round(monthly_t, 2) if monthly_t is not None else None,
-            monthly_new_to_stretch=round(monthly_s, 2) if monthly_s is not None else None,
+            monthly_new_to_operational=round(monthly, 2) if monthly is not None else None,
+            home_mix_band=mix_band,
+            home_shift_gap=shift_gap,
             status=status,
-            referral_mix=mix,
+            referral_source=ref.source,
+            referral_mix=playbook,
+            referral_monthly_by_channel=monthly_by,
             actions=actions,
+            ignore_for_priority=ignore,
         )
-        drafts.append((_priority_score(home, floor, target, stretch), plan))
+        drafts.append(
+            (
+                _priority_score(
+                    ignore=ignore,
+                    home=home,
+                    op=op,
+                    mix_band=mix_band,
+                    shift_gap=shift_gap,
+                ),
+                plan,
+            )
+        )
 
     drafts.sort(key=lambda x: -x[0])
     out: List[ClinicActionPlan] = []
@@ -175,18 +238,24 @@ def public_action_summary(plans: List[ClinicActionPlan]) -> Dict[str, Any]:
                 "clinic": p.clinic,
                 "alias": p.alias,
                 "status": p.status,
+                "ignore_for_priority": p.ignore_for_priority,
                 "competition_label": p.competition_label,
-                "kpi_target": p.kpi_target,
-                "monthly_new_to_target": p.monthly_new_to_target,
+                "operational_kpi": p.operational_kpi,
+                "fair_share_kpi": p.fair_share_kpi,
+                "home_mix_band": p.home_mix_band,
+                "home_shift_gap": p.home_shift_gap,
+                "monthly_new_to_operational": p.monthly_new_to_operational,
+                "referral_source": p.referral_source,
                 "referral_channels": [c["channel"] for c in p.referral_mix],
+                "referral_monthly_by_channel": p.referral_monthly_by_channel,
                 "actions": p.actions,
                 "gap_sign": (
                     None
-                    if p.gap_to_target is None
+                    if p.gap_to_operational is None
                     else "over"
-                    if p.gap_to_target > 0
+                    if p.gap_to_operational > 0
                     else "at"
-                    if p.gap_to_target == 0
+                    if p.gap_to_operational == 0
                     else "under"
                 ),
             }

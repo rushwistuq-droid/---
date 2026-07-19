@@ -1,7 +1,4 @@
-"""実績患者数と取得KPIの差分比較。
-
-機密実績は analysis/confidential/ または環境変数 ACTUALS_PATH から読む。
-"""
+"""実績と実務KPI・公平シェア・居宅ミックスの差分。"""
 
 from __future__ import annotations
 
@@ -29,29 +26,18 @@ class ActualVsKpiRow:
     actual_home: int
     actual_total: int
     actual_home_share: float
-    acquisition_floor_home: int
-    acquisition_target_home: int
-    acquisition_stretch_home: int
-    competitive_home: float
-    gap_vs_target: int
-    gap_vs_floor: int
-    attainment_vs_target: float
+    fair_share_kpi: int
+    operational_kpi: int
+    operational_stretch: int
+    growth_mode: str
+    home_mix_band: Optional[str]
+    home_shift_gap: Optional[int]
+    gap_vs_operational: int
+    attainment_vs_operational: float
     competition_label: str
-    competitors_clinics: float
-    competitors_hospitals: float
-    demand_home_adjusted: float
+    ignore_for_priority: bool
+    status: str
     physician_fte: Optional[float]
-    note: str
-
-
-def _load_yaml(path: Path) -> dict:
-    text = path.read_text(encoding="utf-8")
-    try:
-        import yaml  # type: ignore
-
-        return yaml.safe_load(text)
-    except ImportError:
-        return _parse_simple_actuals_yaml(text)
 
 
 def _parse_simple_actuals_yaml(text: str) -> dict:
@@ -76,8 +62,7 @@ def _parse_simple_actuals_yaml(text: str) -> dict:
             continue
         if ":" in line:
             k, v = line.strip().split(":", 1)
-            k = k.strip()
-            v = v.strip()
+            k, v = k.strip(), v.strip()
             if k in ("facility", "home"):
                 current[k] = int(v)
             else:
@@ -85,6 +70,16 @@ def _parse_simple_actuals_yaml(text: str) -> dict:
     if current:
         clinics.append(current)
     return meta
+
+
+def _load_yaml(path: Path) -> dict:
+    text = path.read_text(encoding="utf-8")
+    try:
+        import yaml  # type: ignore
+
+        return yaml.safe_load(text)
+    except ImportError:
+        return _parse_simple_actuals_yaml(text)
 
 
 def load_actuals(path: Optional[Path] = None) -> Dict[str, dict]:
@@ -111,22 +106,25 @@ def compare_actuals_to_kpi(
 ) -> List[ActualVsKpiRow]:
     actuals = load_actuals(actuals_path)
     rows: List[ActualVsKpiRow] = []
-    for a in analyze_all_wakasa(prefer_points=prefer_points):
+    for a in analyze_all_wakasa(prefer_points=prefer_points, actuals=actuals):
         if a.clinic not in actuals:
             continue
         act = actuals[a.clinic]
         home = act["home"]
         fac = act["facility"]
         total = home + fac
-        target = a.kpi_target_home
-        if home >= a.acquisition.acquisition_stretch_home:
-            note = "stretch以上（既に高実績）"
-        elif home >= target:
-            note = "目標達成"
-        elif home >= a.acquisition.acquisition_floor_home:
-            note = "フロア以上・目標未達"
+        g = a.growth
+        op = a.operational_kpi_home
+        if g and g.ignore_for_priority:
+            status = "開院初期（優先対象外）"
+        elif g and g.home_mix and g.home_mix.band == "施設偏重" and g.home_mix.shift_gap_to_target > 0:
+            status = "居宅シフト要"
+        elif home >= (g.operational_stretch_home if g else op):
+            status = "伸長以上"
+        elif home >= op:
+            status = "実務KPI達成"
         else:
-            note = "フロア未達（優先獲得）"
+            status = "実務KPI未達"
 
         rows.append(
             ActualVsKpiRow(
@@ -136,19 +134,18 @@ def compare_actuals_to_kpi(
                 actual_home=home,
                 actual_total=total,
                 actual_home_share=round(home / total, 3) if total else 0.0,
-                acquisition_floor_home=a.acquisition.acquisition_floor_home,
-                acquisition_target_home=target,
-                acquisition_stretch_home=a.acquisition.acquisition_stretch_home,
-                competitive_home=round(a.acquisition.competitive_home, 1),
-                gap_vs_target=home - target,
-                gap_vs_floor=home - a.acquisition.acquisition_floor_home,
-                attainment_vs_target=round(home / target, 3) if target else 0.0,
+                fair_share_kpi=a.kpi_target_home,
+                operational_kpi=op,
+                operational_stretch=g.operational_stretch_home if g else a.acquisition.acquisition_stretch_home,
+                growth_mode=g.mode if g else "early",
+                home_mix_band=g.home_mix.band if g and g.home_mix else None,
+                home_shift_gap=g.home_mix.shift_gap_to_target if g and g.home_mix else None,
+                gap_vs_operational=home - op,
+                attainment_vs_operational=round(home / op, 3) if op else 0.0,
                 competition_label=a.acquisition.competition_label,
-                competitors_clinics=a.competitors_clinics,
-                competitors_hospitals=a.competitors_hospitals,
-                demand_home_adjusted=a.demand_home_adjusted,
+                ignore_for_priority=bool(g.ignore_for_priority) if g else False,
+                status=status,
                 physician_fte=a.physician_fte,
-                note=note,
             )
         )
     return rows
@@ -156,39 +153,42 @@ def compare_actuals_to_kpi(
 
 def rows_to_public_summary(rows: List[ActualVsKpiRow]) -> dict:
     bands = {
-        "stretch以上（既に高実績）": 0,
-        "目標達成": 0,
-        "フロア以上・目標未達": 0,
-        "フロア未達（優先獲得）": 0,
+        "開院初期（優先対象外）": 0,
+        "居宅シフト要": 0,
+        "実務KPI未達": 0,
+        "実務KPI達成": 0,
+        "伸長以上": 0,
     }
-    gaps = []
+    clinics = []
     for r in rows:
-        bands[r.note] = bands.get(r.note, 0) + 1
-        gaps.append(
+        bands[r.status] = bands.get(r.status, 0) + 1
+        clinics.append(
             {
                 "clinic": r.clinic,
-                "gap_vs_target_sign": (
-                    "over" if r.gap_vs_target > 0 else "at" if r.gap_vs_target == 0 else "under"
+                "status": r.status,
+                "operational_kpi": r.operational_kpi,
+                "fair_share_kpi": r.fair_share_kpi,
+                "growth_mode": r.growth_mode,
+                "home_mix_band": r.home_mix_band,
+                "home_shift_gap": r.home_shift_gap,
+                "ignore_for_priority": r.ignore_for_priority,
+                "gap_vs_operational_sign": (
+                    "over" if r.gap_vs_operational > 0 else "at" if r.gap_vs_operational == 0 else "under"
                 ),
-                "attainment_band": r.note,
                 "competition_label": r.competition_label,
-                "acquisition_target_home": r.acquisition_target_home,
-                "acquisition_floor_home": r.acquisition_floor_home,
-                "acquisition_stretch_home": r.acquisition_stretch_home,
             }
         )
     return {
-        "metric": "home_patients_vs_acquisition_target",
+        "metric": "home_patients_vs_operational_kpi",
         "n_clinics": len(rows),
         "band_counts": bands,
-        "clinics": gaps,
+        "clinics": clinics,
     }
 
 
 def write_confidential_report(rows: List[ActualVsKpiRow], path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    payload = {
-        "metric": "actual patients vs acquisition KPI",
-        "rows": [asdict(r) for r in rows],
-    }
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    path.write_text(
+        json.dumps({"rows": [asdict(r) for r in rows]}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )

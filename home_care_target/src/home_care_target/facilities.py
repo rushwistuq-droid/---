@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable, List, Optional, Sequence
@@ -11,6 +12,13 @@ from .geometry import haversine_km
 from .data_loader import load_constants
 
 DATA = Path(__file__).resolve().parents[2] / "data" / "processed"
+
+# 自グループを競合から除外するための名称パターン
+OWN_GROUP_NAME_PATTERNS = (
+    r"わかさクリニック",
+    r"元気会",
+    r"医療法人\s*元気会",
+)
 
 
 @dataclass
@@ -23,6 +31,7 @@ class FacilityPoint:
     pref: str
     municipality: str
     enhanced: bool = False
+    enhanced_kind: str = "unknown"  # solo|joint|standard|unknown
 
 
 @dataclass
@@ -34,6 +43,20 @@ class PointSupply:
     hospital_ids: List[str] = field(default_factory=list)
     hospital_weight: float = 1.0
     method: str = "facility_points"
+    clinic_enhanced: float = 0.0
+    clinic_standard: float = 0.0
+    hospital_enhanced: float = 0.0
+    hospital_standard: float = 0.0
+    excluded_own_group: int = 0
+
+
+def is_own_group_facility(name: str, patterns: Sequence[str] = OWN_GROUP_NAME_PATTERNS) -> bool:
+    if not name:
+        return False
+    for pat in patterns:
+        if re.search(pat, name):
+            return True
+    return False
 
 
 def load_facility_points() -> List[FacilityPoint]:
@@ -54,6 +77,8 @@ def load_facility_points() -> List[FacilityPoint]:
                 facility_type=f.get("facility_type", "home_support_clinic"),
                 pref=f.get("pref", ""),
                 municipality=f.get("municipality", ""),
+                enhanced=bool(f.get("enhanced", False)),
+                enhanced_kind=str(f.get("enhanced_kind") or "unknown"),
             )
         )
     return out
@@ -81,28 +106,44 @@ def count_facilities_in_radius(
     radius_km: float,
     facilities: Optional[Sequence[FacilityPoint]] = None,
     hospital_weight: Optional[float] = None,
+    *,
+    exclude_own_group: bool = True,
 ) -> PointSupply:
     facilities = list(facilities) if facilities is not None else load_facility_points()
-    clinics = []
-    hospitals = []
+    clinics: List[FacilityPoint] = []
+    hospitals: List[FacilityPoint] = []
     prefs = set()
+    excluded = 0
     for f in facilities:
-        if haversine_km(lat, lon, f.lat, f.lon) <= radius_km:
-            prefs.add(f.pref)
-            if f.facility_type == "home_support_hospital":
-                hospitals.append(f.id)
-            else:
-                clinics.append(f.id)
+        if haversine_km(lat, lon, f.lat, f.lon) > radius_km:
+            continue
+        if exclude_own_group and is_own_group_facility(f.name):
+            excluded += 1
+            continue
+        prefs.add(f.pref)
+        if f.facility_type == "home_support_hospital":
+            hospitals.append(f)
+        else:
+            clinics.append(f)
     hw = hospital_weight if hospital_weight is not None else hospital_weight_for_prefs(prefs)
+    c_enh = sum(1 for f in clinics if f.enhanced)
+    c_std = len(clinics) - c_enh
+    h_enh = sum(1 for f in hospitals if f.enhanced)
+    h_std = len(hospitals) - h_enh
     units = len(clinics) + len(hospitals) * hw
     return PointSupply(
         clinics=float(len(clinics)),
         hospitals=float(len(hospitals)),
         supply_units=round(units, 2),
-        clinic_ids=clinics,
-        hospital_ids=hospitals,
+        clinic_ids=[f.id for f in clinics],
+        hospital_ids=[f.id for f in hospitals],
         hospital_weight=round(hw, 3),
         method="facility_points",
+        clinic_enhanced=float(c_enh),
+        clinic_standard=float(c_std),
+        hospital_enhanced=float(h_enh),
+        hospital_standard=float(h_std),
+        excluded_own_group=excluded,
     )
 
 
@@ -111,31 +152,19 @@ def group_overlap_shares(
     *,
     overlap_radius_km: float = 16.0,
 ) -> dict[str, float]:
-    """同一グループ院が近接する場合の需要按分シェア（距離逆数、合計1）。
-
-    各院について、overlap_radius 内の他院との関係でソフト割当を行う。
-    孤立院は 1.0。近接クラスタ内では距離逆数で正規化。
-    """
+    """同一グループ院が近接する場合の需要按分シェア（距離逆数、合計1）。"""
     n = len(clinic_points)
     if n == 0:
         return {}
-    # For each clinic, find peers within overlap radius (including self)
     shares: dict[str, float] = {}
     for i, (name_i, lat_i, lon_i) in enumerate(clinic_points):
         weights = []
-        peers = []
         for j, (name_j, lat_j, lon_j) in enumerate(clinic_points):
             d = haversine_km(lat_i, lon_i, lat_j, lon_j)
             if d <= overlap_radius_km:
-                # self gets base weight; distance decay for others
                 w = 1.0 / max(d, 0.5)
                 weights.append(w)
-                peers.append(name_j)
         total = sum(weights) or 1.0
-        # This clinic's exclusive-equivalent share of its local cluster:
-        # inverse of peer count weighted — use self_weight/total as ownership of overlapped demand
-        self_w = 1.0 / max(0.5, 0.5)  # self distance ~0 -> use 1/0.5=2
-        # recompute self properly
         self_w = 1.0 / 0.5
         shares[name_i] = self_w / total
     return shares

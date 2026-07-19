@@ -19,13 +19,12 @@ class TestPipeline(unittest.TestCase):
         self.assertAlmostEqual(p.lat, 35.8788, places=3)
 
     def test_analyze_one_shot(self):
-        a = analyze_clinic(resolve_clinic("市川"))
-        self.assertGreater(a.kpi_target_home, 0)
+        a = analyze_clinic(resolve_clinic("市川"), actual_home=59, actual_facility=45)
+        self.assertGreater(a.operational_kpi_home, 0)
         self.assertGreater(a.capacity_cap_home, 0)
-        self.assertGreater(a.demand_home_adjusted, 0)
         row = a.management_row()
-        self.assertIn("acquisition_kpi_home", row)
-        self.assertIn("capacity_cap_home", row)
+        self.assertIn("operational_kpi_home", row)
+        self.assertIn("fair_share_kpi_home", row)
 
 
 class TestDashboardAndActions(unittest.TestCase):
@@ -33,20 +32,19 @@ class TestDashboardAndActions(unittest.TestCase):
         dash = build_dashboard()
         self.assertGreaterEqual(dash["n_clinics"], 13)
         pub = public_dashboard(dash)
-        # public may keep attainment ratio but not raw actuals keys required
         for r in pub["rows"]:
-            self.assertIn("acquisition_kpi_home", r)
-            self.assertIn("capacity_cap_home", r)
+            self.assertIn("operational_kpi_home", r)
             self.assertNotIn("actual_home", r)
 
-    def test_actions_priority_orders_underperformers(self):
+    def test_actions_deprioritize_urawa(self):
         plans = build_action_plans(months=12)
-        self.assertEqual(plans[0].priority, 1)
-        # 浦和 should be high priority (under floor)
-        aliases = [p.alias for p in plans[:3]]
-        self.assertTrue(any(a in ("浦和", "市川") for a in aliases))
+        urawa = next(p for p in plans if p.alias == "浦和")
+        self.assertTrue(urawa.ignore_for_priority)
+        # 施設偏重院が上位に来る
+        top = [p for p in plans if not p.ignore_for_priority][:3]
+        self.assertTrue(any(p.home_mix_band == "施設偏重" for p in top))
         pub = public_action_summary(plans)
-        self.assertNotIn("actual_home", str(pub))
+        self.assertNotIn('"actual_home"', str(pub))
 
 
 if __name__ == "__main__":

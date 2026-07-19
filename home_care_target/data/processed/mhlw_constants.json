@@ -96,6 +96,21 @@
     "non_zaitaku_visit_extra_per_clinic": 0.08,
     "note": "機能強化型は実効1.0、従来型はT168活動層を踏まえ0.35。在支診以外の訪問実施診は在支診1件あたり0.08ユニットを軽加算"
   },
+  "growth_kpi": {
+    "annual_home_increment_default": 24,
+    "annual_home_increment_stretch": 36,
+    "max_shift_increment": 48,
+    "note": "成熟院は実績+年次増分を本命。能力/FTEで上限"
+  },
+  "home_mix_targets": {
+    "target_share": 0.40,
+    "stretch_share": 0.50,
+    "peer_benchmark_share": 0.55,
+    "note": "施設偏重院の居宅シフト目標。ピアは調布・市川・津田沼・西日暮里帯を目安"
+  },
+  "new_clinics_ignore_priority": [
+    "わかさクリニック浦和"
+  ],
   "supply_weights": {
     "home_support_clinic": 1.0,
     "home_support_hospital": 1.0,

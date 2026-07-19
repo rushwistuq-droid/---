@@ -50,11 +50,13 @@ class SupplySnapshot:
         avg_patients: Optional[float] = None,
         enhanced_clinics: float = 0.0,
     ) -> "SupplySnapshot":
+        c_enh = point.clinic_enhanced if point.clinic_enhanced else enhanced_clinics
         return cls(
             home_support_clinics=point.clinics,
             home_support_hospitals=point.hospitals,
             supply_units=point.supply_units,
-            clinic_enhanced=enhanced_clinics,
+            clinic_enhanced=c_enh,
+            hospital_enhanced=point.hospital_enhanced,
             elderly_65=elderly_65,
             avg_patients_per_clinic=avg_patients,
             hospital_weight=point.hospital_weight,
