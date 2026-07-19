@@ -315,14 +315,17 @@ def estimate_from_point(
         "推奨居宅患者数 = (NDB居宅推計 + 総需要−施設需要の残差) / 2。",
     ]
     sources = [
-        rates["source"]["ndb"],
-        rates["source"]["population"],
+        rates["source"].get("ndb", ""),
+        rates["source"].get("population", ""),
         "国立社会保障・人口問題研究所 日本の地域別将来推計人口（令和5年推計）",
-        constants["source"]["care_facilities"],
-        constants["source"]["social_medical_stats"],
+        constants.get("source", {}).get("facilities")
+        or constants.get("source", {}).get("care_facilities", ""),
+        constants.get("source", {}).get("social_medical_stats")
+        or "厚生労働省 2023年社会医療診療行為別統計",
         "OpenStreetMap Nominatim（住所ジオコーディング）",
         "Wikidata（市区町村代表座標）",
     ]
+    sources = [s for s in sources if s]
 
     return EstimationResult(
         address=address,

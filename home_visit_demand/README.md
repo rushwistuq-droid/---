@@ -1,103 +1,86 @@
-# 訪問診療・居宅患者数 地域推定エンジン
+# 訪問診療・居宅患者数 地域推定エンジン（高精度版）
 
-クリニック住所を入力すると、半径8km（変更可）の人口動態・全国訪問診療利用率・施設入居者控除から、**居宅の訪問診療患者数がどの程度発生しうるか**を推計します。
+クリニック住所から半径8km圏の**居宅訪問診療患者数**を、公的統計に基づき推計します。本部説明用に手法・出典・品質フラグをレポート出力します。
 
 ## すぐ使う
 
 ```bash
 cd home_visit_demand
 pip install -r requirements.txt
-python scripts/build_datasets.py          # 初回のみ（processed 生成）
-python -m home_visit_demand "埼玉県所沢市若狭4-2468-31"
+python3 scripts/download_raw_data.py         # 原本の再取得（任意）
+python3 scripts/build_v2_datasets.py          # 初回・データ更新時
+PYTHONPATH=src python3 -m home_visit_demand "埼玉県所沢市若狭4-2468-31"
 ```
 
-緯度経度が分かる場合（ジオコード不要）:
+緯度経度指定:
 
 ```bash
-PYTHONPATH=src python -m home_visit_demand "所沢テスト" --lat 35.805 --lon 139.455
+PYTHONPATH=src python3 -m home_visit_demand "所沢" --lat 35.805 --lon 139.455
 ```
 
-JSON出力:
+旧ロジック（市区町村代表点）:
 
 ```bash
-PYTHONPATH=src python -m home_visit_demand "東京都練馬区石神井町3-19-16" --json -o /tmp/out.json
+PYTHONPATH=src python3 -m home_visit_demand "..." --legacy
 ```
 
-圏内の入所定員が分かる場合:
+## 高精度版でやっていること
+
+| # | 改善 | 内容 |
+|---|------|------|
+| 1 | メッシュ人口 | 令和2年国勢調査 1/4メッシュ（約250m）で半径円と交差集計 |
+| 2 | 5歳階級・将来人口 | 社人研市区町村5歳階級（2020→2025伸び率）でスケール |
+| 3 | 都道府県別受療率 | NDBを**居宅/施設で別強度**補正（施設が多い都心で居宅を過大推計しない） |
+| 4 | 施設実在 | 介護情報公表システムの入居系事業所（座標・定員）を圏内集計 |
+| 5 | 同一建物の分解 | 施設由来と集合住宅居宅を分離 |
+| 6 | ポリゴン交差モジュール | `polygons.py`（shapely利用時は面積交差、無ければbbox近似） |
+| 7 | 実績キャリブレーション | `scripts/calibrate.py` + YAMLで実績÷推計の縮小推定 |
+
+## 出力の見方
+
+- **推奨・推定居宅訪問診療患者数**: 本部判断の中心値
+- **真・施設患者**: 定員法とNDB法の統合
+- **集合住宅（同一建物の居宅分）**: 施設ではない同一建物患者
+- **品質フラグ**: データ欠落・地域差の注意喚起
+
+## 実績キャリブレーション
 
 ```bash
-PYTHONPATH=src python -m home_visit_demand "..." --facility-beds 3500
+# data/processed/calibration_template.yaml をコピーして実績を記入
+PYTHONPATH=src python3 scripts/calibrate.py path/to/actuals.yaml
+# → data/processed/calibration.yaml に係数が出力される
 ```
 
-## 推計の流れ
+## データ出典
 
-```text
-住所 → 緯度経度（Nominatim）
-  → 半径N km内の市区町村を距離減衰で重み付き集計
-  → 社人研2025年人口（総人口 / 65+ / 75+）
-  → 全国年齢構造で 65–69 … 90+ に細分化
-  → 第10回NDBの年齢別訪問診療受療率を乗算
-  → 同一建物以外 = 居宅側、同一建物等 = 施設側
-  → 施設入居者（介護保険施設+特定施設・GH概数）を控除した残差と突合
-  → 推奨居宅患者数 = (NDB居宅推計 + 残差法) / 2
-```
+- 厚労省 第10回NDBオープンデータ（在宅医療・性年齢/都道府県）
+- 厚労省 社会医療診療行為別統計（2023年）
+- 総務省 令和2年国勢調査 地域メッシュ統計 T001102
+- 社人研 地域別将来推計人口（令和5年推計）市区町村5歳階級
+- 厚労省 介護サービス情報公表システム オープンデータ
+- OpenStreetMap Nominatim / Wikidata
 
-### 出力の見方
-
-| 指標 | 意味 |
-|------|------|
-| 総訪問診療患者数 | 圏内で月間発生する訪問診療患者（ユニーク）の推計 |
-| 居宅（NDB同一建物以外） | レセプト上「同一建物居住者以外」に相当する居宅需要 |
-| 施設寄り（NDB同一建物等） | 施設・集合住宅など同一建物算定の需要 |
-| 施設入居者推計 | 65歳以上×全国入居率（施設定員が分かれば上書き可） |
-| 推奨・推定居宅訪問診療患者数 | 実務判断用の中心値 |
-
-## データ出典（公的統計）
-
-| データ | 出典 |
-|--------|------|
-| 訪問診療の年齢別算定回数 | 厚生労働省 **第10回NDBオープンデータ**（2022年度）C在宅医療 |
-| 全国訪問診療患者数の目安 | 厚生労働省 **2023年社会医療診療行為別統計**（約100.1万人） |
-| 市区町村別人口（2025） | 国立社会保障・人口問題研究所 **地域別将来推計人口（令和5年推計）** |
-| 全国年齢別人口 | 総務省統計局 **人口推計（2022年10月1日）** |
-| 介護保険施設定員・利用率 | 厚生労働省 **令和5年介護サービス施設・事業所調査** |
-| 住所座標 | OpenStreetMap Nominatim |
-| 市区町村代表点 | Wikidata（JIS市区町村コード + 座標） |
-
-原本ファイルは `data/`、加工済みは `data/processed/` にあります。
-
-## 受療率の考え方
-
-NDBの年間算定回数を12で割り、社会医療診療行為別統計に近い **月あたり約1.90回/患者** でユニーク患者数に換算しています。
-
-```text
-年齢階級別患者率 = (年間算定回数 / 12 / 1.90) / 当該年齢人口
-```
-
-これにより全国合計は約96万人となり、社会医療統計の約100万人と同オーダーになります。
-
-## 限界・注意
-
-- 市区町村の代表点距離による近似であり、メッシュ人口や正確なポリゴン交差ではありません。
-- 75歳以上の細分化は全国年齢構造を地域に当てはめています（社人研の5歳階級市区町村表を取り込めば精度向上可）。
-- 「同一建物」には集合住宅の居宅患者も含まれるため、施設需要はやや過大になり得ます。
-- サ高住・住宅型有料の一部など、訪問診療を受けるが施設統計に載りにくい層があります。
-- 競合クリニック数・シェアは本モジュールの範囲外です（別途、在宅療養支援診療所データと組み合わせ可能）。
+入手元の詳細は `data/SOURCES.md`。
 
 ## テスト
 
 ```bash
-cd home_visit_demand
-PYTHONPATH=src python -m unittest tests.test_estimator -v
+PYTHONPATH=src python3 -m unittest tests.test_estimator tests.test_precision -v
 ```
 
 ## ディレクトリ
 
 ```text
 home_visit_demand/
-  data/                  # 公的統計の原本
-  data/processed/        # 受療率・市区町村人口など
-  scripts/build_datasets.py
-  src/home_visit_demand/ # 推定エンジン + CLI
-  tests/
+  data/mesh_zips/          # 全都道府県メッシュ（再生成用）
+  data/ipss_age_raw/       # 社人研5歳階級
+  data/facilities_raw/     # 介護情報公表CSV
+  data/processed/          # 推定用加工データ
+  scripts/build_v2_datasets.py
+  scripts/calibrate.py
+  src/home_visit_demand/
+    precision.py           # 高精度エンジン
+    estimator.py           # 旧ロジック
+    polygons.py            # ポリゴン交差
+  examples/
 ```
