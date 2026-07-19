@@ -89,6 +89,13 @@
     "visits_per_patient_per_month": 1.9,
     "note": "全国居宅シェアは都道府県NDB再集計。地域別は prefecture_home_shares.json"
   },
+  "competitor_activity": {
+    "enhanced_clinic_rate": 1.0,
+    "standard_clinic_rate": 0.35,
+    "active_competitor_rate_fallback": 0.45,
+    "non_zaitaku_visit_extra_per_clinic": 0.08,
+    "note": "機能強化型は実効1.0、従来型はT168活動層を踏まえ0.35。在支診以外の訪問実施診は在支診1件あたり0.08ユニットを軽加算"
+  },
   "supply_weights": {
     "home_support_clinic": 1.0,
     "home_support_hospital": 1.0,

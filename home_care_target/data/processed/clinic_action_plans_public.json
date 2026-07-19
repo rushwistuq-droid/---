@@ -1,0 +1,257 @@
+{
+  "months": 12,
+  "plans": [
+    {
+      "priority": 1,
+      "clinic": "わかさクリニック浦和",
+      "alias": "浦和",
+      "status": "フロア未達（優先獲得）",
+      "competition_label": "非常に高（シェア拡大が難しい）",
+      "kpi_target": 28,
+      "monthly_new_to_target": 1.17,
+      "referral_channels": [
+        "居宅介護支援（CM）",
+        "病院退院調整",
+        "訪問看護",
+        "自院外来・施設転換"
+      ],
+      "actions": [
+        "今後12ヶ月で月平均1.2人の居宅新規が必要（目標到達）",
+        "未取引CM事業所の開拓リストを週次で回す",
+        "近隣病院の地域連携室へ定期訪問し退院時許諾をKPI化"
+      ],
+      "gap_sign": "under"
+    },
+    {
+      "priority": 2,
+      "clinic": "わかさクリニックリーフシティ市川",
+      "alias": "市川",
+      "status": "目標達成（伸長挑戦）",
+      "competition_label": "中",
+      "kpi_target": 56,
+      "monthly_new_to_target": 0.0,
+      "referral_channels": [
+        "居宅介護支援（CM）",
+        "病院退院調整",
+        "訪問看護"
+      ],
+      "actions": [
+        "伸長まで月平均3.8人（任意）",
+        "既存パイプラインの質（重症・継続）を優先"
+      ],
+      "gap_sign": "over"
+    },
+    {
+      "priority": 3,
+      "clinic": "わかさクリニック本院",
+      "alias": "本院",
+      "status": "stretch以上（維持・質向上）",
+      "competition_label": "高",
+      "kpi_target": 35,
+      "monthly_new_to_target": 0.0,
+      "referral_channels": [
+        "居宅介護支援（CM）",
+        "病院退院調整",
+        "訪問看護",
+        "自院外来・施設転換"
+      ],
+      "actions": [
+        "獲得KPIは超過済み。維持と紹介元の質、グループ内重複の整理",
+        "16km圏の自グループ院と退院調整・CMエリアを分担"
+      ],
+      "gap_sign": "over"
+    },
+    {
+      "priority": 4,
+      "clinic": "わかさクリニック所沢",
+      "alias": "所沢",
+      "status": "stretch以上（維持・質向上）",
+      "competition_label": "高",
+      "kpi_target": 39,
+      "monthly_new_to_target": 0.0,
+      "referral_channels": [
+        "居宅介護支援（CM）",
+        "病院退院調整",
+        "訪問看護",
+        "自院外来・施設転換"
+      ],
+      "actions": [
+        "獲得KPIは超過済み。維持と紹介元の質、グループ内重複の整理",
+        "16km圏の自グループ院と退院調整・CMエリアを分担"
+      ],
+      "gap_sign": "over"
+    },
+    {
+      "priority": 5,
+      "clinic": "わかさクリニックひばりが丘",
+      "alias": "ひばりが丘",
+      "status": "stretch以上（維持・質向上）",
+      "competition_label": "非常に高（シェア拡大が難しい）",
+      "kpi_target": 25,
+      "monthly_new_to_target": 0.0,
+      "referral_channels": [
+        "居宅介護支援（CM）",
+        "病院退院調整",
+        "訪問看護",
+        "自院外来・施設転換"
+      ],
+      "actions": [
+        "獲得KPIは超過済み。維持と紹介元の質、グループ内重複の整理"
+      ],
+      "gap_sign": "over"
+    },
+    {
+      "priority": 6,
+      "clinic": "わかさクリニック石神井公園",
+      "alias": "石神井公園",
+      "status": "stretch以上（維持・質向上）",
+      "competition_label": "非常に高（シェア拡大が難しい）",
+      "kpi_target": 24,
+      "monthly_new_to_target": 0.0,
+      "referral_channels": [
+        "居宅介護支援（CM）",
+        "病院退院調整",
+        "訪問看護",
+        "自院外来・施設転換"
+      ],
+      "actions": [
+        "獲得KPIは超過済み。維持と紹介元の質、グループ内重複の整理"
+      ],
+      "gap_sign": "over"
+    },
+    {
+      "priority": 7,
+      "clinic": "わかさクリニック三鷹",
+      "alias": "三鷹",
+      "status": "stretch以上（維持・質向上）",
+      "competition_label": "非常に高（シェア拡大が難しい）",
+      "kpi_target": 22,
+      "monthly_new_to_target": 0.0,
+      "referral_channels": [
+        "居宅介護支援（CM）",
+        "病院退院調整",
+        "訪問看護",
+        "自院外来・施設転換"
+      ],
+      "actions": [
+        "獲得KPIは超過済み。維持と紹介元の質、グループ内重複の整理"
+      ],
+      "gap_sign": "over"
+    },
+    {
+      "priority": 8,
+      "clinic": "わかさクリニック府中",
+      "alias": "府中",
+      "status": "stretch以上（維持・質向上）",
+      "competition_label": "中",
+      "kpi_target": 46,
+      "monthly_new_to_target": 0.0,
+      "referral_channels": [
+        "居宅介護支援（CM）",
+        "病院退院調整",
+        "訪問看護"
+      ],
+      "actions": [
+        "獲得KPIは超過済み。維持と紹介元の質、グループ内重複の整理"
+      ],
+      "gap_sign": "over"
+    },
+    {
+      "priority": 9,
+      "clinic": "わかさクリニック調布",
+      "alias": "調布",
+      "status": "stretch以上（維持・質向上）",
+      "competition_label": "非常に高（シェア拡大が難しい）",
+      "kpi_target": 23,
+      "monthly_new_to_target": 0.0,
+      "referral_channels": [
+        "居宅介護支援（CM）",
+        "病院退院調整",
+        "訪問看護",
+        "自院外来・施設転換"
+      ],
+      "actions": [
+        "獲得KPIは超過済み。維持と紹介元の質、グループ内重複の整理"
+      ],
+      "gap_sign": "over"
+    },
+    {
+      "priority": 10,
+      "clinic": "わかさクリニック三軒茶屋",
+      "alias": "三軒茶屋",
+      "status": "stretch以上（維持・質向上）",
+      "competition_label": "非常に高（シェア拡大が難しい）",
+      "kpi_target": 23,
+      "monthly_new_to_target": 0.0,
+      "referral_channels": [
+        "居宅介護支援（CM）",
+        "病院退院調整",
+        "訪問看護",
+        "自院外来・施設転換"
+      ],
+      "actions": [
+        "獲得KPIは超過済み。維持と紹介元の質、グループ内重複の整理"
+      ],
+      "gap_sign": "over"
+    },
+    {
+      "priority": 11,
+      "clinic": "わかさクリニック津田沼",
+      "alias": "津田沼",
+      "status": "stretch以上（維持・質向上）",
+      "competition_label": "高",
+      "kpi_target": 39,
+      "monthly_new_to_target": 0.0,
+      "referral_channels": [
+        "居宅介護支援（CM）",
+        "病院退院調整",
+        "訪問看護",
+        "自院外来・施設転換"
+      ],
+      "actions": [
+        "獲得KPIは超過済み。維持と紹介元の質、グループ内重複の整理",
+        "16km圏の自グループ院と退院調整・CMエリアを分担"
+      ],
+      "gap_sign": "over"
+    },
+    {
+      "priority": 12,
+      "clinic": "わかさクリニック西日暮里",
+      "alias": "西日暮里",
+      "status": "stretch以上（維持・質向上）",
+      "competition_label": "高",
+      "kpi_target": 36,
+      "monthly_new_to_target": 0.0,
+      "referral_channels": [
+        "居宅介護支援（CM）",
+        "病院退院調整",
+        "訪問看護",
+        "自院外来・施設転換"
+      ],
+      "actions": [
+        "獲得KPIは超過済み。維持と紹介元の質、グループ内重複の整理",
+        "16km圏の自グループ院と退院調整・CMエリアを分担"
+      ],
+      "gap_sign": "over"
+    },
+    {
+      "priority": 13,
+      "clinic": "わかさクリニック高円寺",
+      "alias": "高円寺",
+      "status": "stretch以上（維持・質向上）",
+      "competition_label": "非常に高（シェア拡大が難しい）",
+      "kpi_target": 27,
+      "monthly_new_to_target": 0.0,
+      "referral_channels": [
+        "居宅介護支援（CM）",
+        "病院退院調整",
+        "訪問看護",
+        "自院外来・施設転換"
+      ],
+      "actions": [
+        "獲得KPIは超過済み。維持と紹介元の質、グループ内重複の整理"
+      ],
+      "gap_sign": "over"
+    }
+  ]
+}

@@ -2,9 +2,9 @@
   "metric": "home_patients_vs_acquisition_target",
   "n_clinics": 13,
   "band_counts": {
-    "stretch以上（既に高実績）": 9,
-    "目標達成": 2,
-    "フロア以上・目標未達": 1,
+    "stretch以上（既に高実績）": 11,
+    "目標達成": 1,
+    "フロア以上・目標未達": 0,
     "フロア未達（優先獲得）": 1
   },
   "clinics": [
@@ -12,118 +12,118 @@
       "clinic": "わかさクリニック本院",
       "gap_vs_target_sign": "over",
       "attainment_band": "stretch以上（既に高実績）",
-      "competition_label": "中",
-      "acquisition_target_home": 51,
-      "acquisition_floor_home": 20,
-      "acquisition_stretch_home": 94
+      "competition_label": "高",
+      "acquisition_target_home": 35,
+      "acquisition_floor_home": 19,
+      "acquisition_stretch_home": 65
     },
     {
       "clinic": "わかさクリニック所沢",
       "gap_vs_target_sign": "over",
       "attainment_band": "stretch以上（既に高実績）",
-      "competition_label": "中",
-      "acquisition_target_home": 57,
-      "acquisition_floor_home": 23,
-      "acquisition_stretch_home": 106
+      "competition_label": "高",
+      "acquisition_target_home": 39,
+      "acquisition_floor_home": 21,
+      "acquisition_stretch_home": 72
     },
     {
       "clinic": "わかさクリニックひばりが丘",
       "gap_vs_target_sign": "over",
       "attainment_band": "stretch以上（既に高実績）",
-      "competition_label": "高",
-      "acquisition_target_home": 45,
-      "acquisition_floor_home": 17,
-      "acquisition_stretch_home": 82
+      "competition_label": "非常に高（シェア拡大が難しい）",
+      "acquisition_target_home": 25,
+      "acquisition_floor_home": 15,
+      "acquisition_stretch_home": 39
     },
     {
       "clinic": "わかさクリニック石神井公園",
       "gap_vs_target_sign": "over",
       "attainment_band": "stretch以上（既に高実績）",
-      "competition_label": "高",
-      "acquisition_target_home": 43,
-      "acquisition_floor_home": 16,
-      "acquisition_stretch_home": 79
+      "competition_label": "非常に高（シェア拡大が難しい）",
+      "acquisition_target_home": 24,
+      "acquisition_floor_home": 14,
+      "acquisition_stretch_home": 38
     },
     {
       "clinic": "わかさクリニック三鷹",
       "gap_vs_target_sign": "over",
       "attainment_band": "stretch以上（既に高実績）",
-      "competition_label": "高",
-      "acquisition_target_home": 38,
-      "acquisition_floor_home": 14,
-      "acquisition_stretch_home": 71
+      "competition_label": "非常に高（シェア拡大が難しい）",
+      "acquisition_target_home": 22,
+      "acquisition_floor_home": 13,
+      "acquisition_stretch_home": 34
     },
     {
       "clinic": "わかさクリニック府中",
       "gap_vs_target_sign": "over",
       "attainment_band": "stretch以上（既に高実績）",
       "competition_label": "中",
-      "acquisition_target_home": 70,
-      "acquisition_floor_home": 27,
-      "acquisition_stretch_home": 120
+      "acquisition_target_home": 46,
+      "acquisition_floor_home": 26,
+      "acquisition_stretch_home": 85
     },
     {
       "clinic": "わかさクリニック調布",
       "gap_vs_target_sign": "over",
       "attainment_band": "stretch以上（既に高実績）",
-      "competition_label": "高",
-      "acquisition_target_home": 42,
-      "acquisition_floor_home": 15,
-      "acquisition_stretch_home": 78
+      "competition_label": "非常に高（シェア拡大が難しい）",
+      "acquisition_target_home": 23,
+      "acquisition_floor_home": 14,
+      "acquisition_stretch_home": 36
     },
     {
       "clinic": "わかさクリニック三軒茶屋",
       "gap_vs_target_sign": "over",
       "attainment_band": "stretch以上（既に高実績）",
-      "competition_label": "高",
-      "acquisition_target_home": 40,
-      "acquisition_floor_home": 14,
-      "acquisition_stretch_home": 75
+      "competition_label": "非常に高（シェア拡大が難しい）",
+      "acquisition_target_home": 23,
+      "acquisition_floor_home": 13,
+      "acquisition_stretch_home": 37
     },
     {
       "clinic": "わかさクリニック津田沼",
       "gap_vs_target_sign": "over",
       "attainment_band": "stretch以上（既に高実績）",
-      "competition_label": "中",
-      "acquisition_target_home": 63,
-      "acquisition_floor_home": 22,
-      "acquisition_stretch_home": 117
+      "competition_label": "高",
+      "acquisition_target_home": 39,
+      "acquisition_floor_home": 20,
+      "acquisition_stretch_home": 73
     },
     {
       "clinic": "わかさクリニック西日暮里",
       "gap_vs_target_sign": "over",
-      "attainment_band": "目標達成",
-      "competition_label": "中",
-      "acquisition_target_home": 52,
-      "acquisition_floor_home": 19,
-      "acquisition_stretch_home": 96
+      "attainment_band": "stretch以上（既に高実績）",
+      "competition_label": "高",
+      "acquisition_target_home": 36,
+      "acquisition_floor_home": 18,
+      "acquisition_stretch_home": 67
     },
     {
       "clinic": "わかさクリニック高円寺",
       "gap_vs_target_sign": "over",
-      "attainment_band": "目標達成",
-      "competition_label": "中",
-      "acquisition_target_home": 48,
-      "acquisition_floor_home": 17,
-      "acquisition_stretch_home": 88
+      "attainment_band": "stretch以上（既に高実績）",
+      "competition_label": "非常に高（シェア拡大が難しい）",
+      "acquisition_target_home": 27,
+      "acquisition_floor_home": 16,
+      "acquisition_stretch_home": 42
     },
     {
       "clinic": "わかさクリニックリーフシティ市川",
-      "gap_vs_target_sign": "under",
-      "attainment_band": "フロア以上・目標未達",
-      "competition_label": "低（獲得しやすい）",
-      "acquisition_target_home": 90,
-      "acquisition_floor_home": 33,
-      "acquisition_stretch_home": 120
+      "gap_vs_target_sign": "over",
+      "attainment_band": "目標達成",
+      "competition_label": "中",
+      "acquisition_target_home": 56,
+      "acquisition_floor_home": 31,
+      "acquisition_stretch_home": 105
     },
     {
       "clinic": "わかさクリニック浦和",
       "gap_vs_target_sign": "under",
       "attainment_band": "フロア未達（優先獲得）",
-      "competition_label": "中",
-      "acquisition_target_home": 48,
-      "acquisition_floor_home": 17,
-      "acquisition_stretch_home": 89
+      "competition_label": "非常に高（シェア拡大が難しい）",
+      "acquisition_target_home": 28,
+      "acquisition_floor_home": 16,
+      "acquisition_stretch_home": 44
     }
   ]
 }

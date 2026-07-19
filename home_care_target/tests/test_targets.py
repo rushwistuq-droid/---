@@ -167,6 +167,29 @@ class TestAcquisition(unittest.TestCase):
         )
         self.assertLessEqual(a.acquisition_target_home, 100)
 
+    def test_enhanced_weighs_more_than_standard(self):
+        # 同じ診療所数でも機能強化型が多いほど実効競合が増えKPIは下がる
+        mostly_std = compute_acquisition_indicator(
+            regional_home_demand=4000,
+            regional_visit_demand=8000,
+            competitors_clinics=100,
+            competitors_hospitals=10,
+            clinic_enhanced=10,
+            clinic_standard=90,
+            physician_fte=2.0,
+        )
+        mostly_enh = compute_acquisition_indicator(
+            regional_home_demand=4000,
+            regional_visit_demand=8000,
+            competitors_clinics=100,
+            competitors_hospitals=10,
+            clinic_enhanced=80,
+            clinic_standard=20,
+            physician_fte=2.0,
+        )
+        self.assertGreater(mostly_enh.effective_supply_units, mostly_std.effective_supply_units)
+        self.assertGreaterEqual(mostly_std.acquisition_target_home, mostly_enh.acquisition_target_home)
+
 
 if __name__ == "__main__":
     unittest.main()

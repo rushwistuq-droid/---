@@ -1,7 +1,6 @@
 """実績患者数と取得KPIの差分比較。
 
 機密実績は analysis/confidential/ または環境変数 ACTUALS_PATH から読む。
-コミット対象外の数値は公開レポートに生値を書き出さない運用を想定。
 """
 
 from __future__ import annotations
@@ -11,17 +10,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from .acquisition import compute_acquisition_indicator
-from .catchment import aggregate_catchment_supply
-from .demand import estimate_demand_for_catchment
-from .facilities import (
-    adjusted_demand,
-    count_facilities_in_radius,
-    hospital_weight_for_prefs,
-    load_facility_points,
-)
-from .targets import SupplySnapshot, compute_home_patient_targets
-from .wakasa_demo_data import CLINIC_ALIASES, CLINICS, MUNICIPALITIES, PHYSICIAN_FTE
+from .pipeline import analyze_all_wakasa
+from .wakasa_demo_data import CLINIC_ALIASES
 
 DEFAULT_ACTUALS = (
     Path(__file__).resolve().parents[3]
@@ -43,9 +33,9 @@ class ActualVsKpiRow:
     acquisition_target_home: int
     acquisition_stretch_home: int
     competitive_home: float
-    gap_vs_target: int  # actual_home - target
+    gap_vs_target: int
     gap_vs_floor: int
-    attainment_vs_target: float  # actual / target
+    attainment_vs_target: float
     competition_label: str
     competitors_clinics: float
     competitors_hospitals: float
@@ -65,7 +55,6 @@ def _load_yaml(path: Path) -> dict:
 
 
 def _parse_simple_actuals_yaml(text: str) -> dict:
-    """最小YAMLパーサ（PyYAML無し環境向け）。本実績ファイル形式専用。"""
     clinics: List[dict] = []
     current: Optional[dict] = None
     meta: Dict[str, Any] = {"clinics": clinics}
@@ -121,99 +110,44 @@ def compare_actuals_to_kpi(
     prefer_points: bool = True,
 ) -> List[ActualVsKpiRow]:
     actuals = load_actuals(actuals_path)
-    munis = list(MUNICIPALITIES.values())
-    points = load_facility_points()
-    clinic_xy = [(c.name, c.lat, c.lon) for c in CLINICS]
     rows: List[ActualVsKpiRow] = []
-
-    for clinic in CLINICS:
-        if clinic.name not in actuals:
+    for a in analyze_all_wakasa(prefer_points=prefer_points):
+        if a.clinic not in actuals:
             continue
-        act = actuals[clinic.name]
-        muni_supply = aggregate_catchment_supply(clinic, munis)
-        prefs = {MUNICIPALITIES[n].pref for n in muni_supply.municipalities if n in MUNICIPALITIES}
-        hw = hospital_weight_for_prefs(prefs)
-        demand = estimate_demand_for_catchment(
-            clinic.lat, clinic.lon, munis, radius_km=clinic.radius_km
-        )
-
-        if prefer_points and points:
-            point_supply = count_facilities_in_radius(
-                clinic.lat, clinic.lon, clinic.radius_km, points, hospital_weight=hw
-            )
-            snap = SupplySnapshot.from_point_supply(
-                point_supply,
-                elderly_65=demand.elderly_65,
-                avg_patients=muni_supply.avg_patients_local_proxy,
-                enhanced_clinics=muni_supply.clinic_enhanced,
-            )
-            if point_supply.clinics + point_supply.hospitals < 1:
-                snap = SupplySnapshot.from_catchment(muni_supply, hospital_weight=hw)
-                snap.elderly_65 = demand.elderly_65
-        else:
-            snap = SupplySnapshot.from_catchment(muni_supply, hospital_weight=hw)
-            snap.elderly_65 = demand.elderly_65
-
-        home_adj, total_adj, _overlap = adjusted_demand(
-            demand.recommended_home_patients,
-            demand.visit_patients_total,
-            clinic.name,
-            clinic_xy,
-        )
-        fte = PHYSICIAN_FTE.get(clinic.name)
-        acq = compute_acquisition_indicator(
-            regional_home_demand=home_adj,
-            regional_visit_demand=total_adj,
-            competitors_clinics=snap.home_support_clinics,
-            competitors_hospitals=snap.home_support_hospitals,
-            hospital_weight=snap.hospital_weight,
-            physician_fte=fte,
-            local_avg_total_patients=muni_supply.avg_patients_local_proxy,
-        )
-        # capacity reference (not primary KPI)
-        _ = compute_home_patient_targets(
-            snap,
-            regional_visit_patients=total_adj,
-            regional_home_patients=home_adj,
-            home_share=demand.home_share_used,
-            physician_fte=fte,
-            clinic_tier="specialty",
-        )
-
+        act = actuals[a.clinic]
         home = act["home"]
         fac = act["facility"]
         total = home + fac
-        target = acq.acquisition_target_home
-        note = ""
-        if home >= acq.acquisition_stretch_home:
+        target = a.kpi_target_home
+        if home >= a.acquisition.acquisition_stretch_home:
             note = "stretch以上（既に高実績）"
         elif home >= target:
             note = "目標達成"
-        elif home >= acq.acquisition_floor_home:
+        elif home >= a.acquisition.acquisition_floor_home:
             note = "フロア以上・目標未達"
         else:
             note = "フロア未達（優先獲得）"
 
         rows.append(
             ActualVsKpiRow(
-                clinic=clinic.name,
+                clinic=a.clinic,
                 alias=act["alias"],
                 actual_facility=fac,
                 actual_home=home,
                 actual_total=total,
                 actual_home_share=round(home / total, 3) if total else 0.0,
-                acquisition_floor_home=acq.acquisition_floor_home,
+                acquisition_floor_home=a.acquisition.acquisition_floor_home,
                 acquisition_target_home=target,
-                acquisition_stretch_home=acq.acquisition_stretch_home,
-                competitive_home=round(acq.competitive_home, 1),
+                acquisition_stretch_home=a.acquisition.acquisition_stretch_home,
+                competitive_home=round(a.acquisition.competitive_home, 1),
                 gap_vs_target=home - target,
-                gap_vs_floor=home - acq.acquisition_floor_home,
+                gap_vs_floor=home - a.acquisition.acquisition_floor_home,
                 attainment_vs_target=round(home / target, 3) if target else 0.0,
-                competition_label=acq.competition_label,
-                competitors_clinics=snap.home_support_clinics,
-                competitors_hospitals=snap.home_support_hospitals,
-                demand_home_adjusted=round(home_adj, 1),
-                physician_fte=fte,
+                competition_label=a.acquisition.competition_label,
+                competitors_clinics=a.competitors_clinics,
+                competitors_hospitals=a.competitors_hospitals,
+                demand_home_adjusted=a.demand_home_adjusted,
+                physician_fte=a.physician_fte,
                 note=note,
             )
         )
@@ -221,7 +155,6 @@ def compare_actuals_to_kpi(
 
 
 def rows_to_public_summary(rows: List[ActualVsKpiRow]) -> dict:
-    """公開用: 生の実績人数を出さず、ギャップ符号と達成帯のみ。"""
     bands = {
         "stretch以上（既に高実績）": 0,
         "目標達成": 0,

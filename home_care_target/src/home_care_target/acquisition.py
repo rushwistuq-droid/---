@@ -6,6 +6,12 @@
 ただし「能力ティア目標」だけだと競合密度が目標に効かない。
 本モジュールは需要÷実効競合を主軸に、能力・医師数で上限をかけた
 獲得目標（attainable acquisition）を算出する。
+
+実効競合（v0.4）
+--------------
+enhanced_clinics × 1.0 + standard_clinics × 0.35
++ hospitals × hospital_weight
++ extra_visit_units（在支診以外の訪問実施診の軽加算）
 """
 
 from __future__ import annotations
@@ -20,7 +26,6 @@ from .data_loader import load_constants
 class AcquisitionIndicator:
     """患者獲得の実務指標一式。"""
 
-    # 市場
     regional_home_demand: float
     regional_visit_demand: float
     competitors_clinics: float
@@ -30,24 +35,24 @@ class AcquisitionIndicator:
     effective_supply_units: float
     active_competitor_rate: float
 
-    # シェア系
-    equilibrium_home: float  # 単純按分
-    competitive_home: float  # 実効競合按分（本指標の中核）
-    top_quartile_home: float  # 上位層想定（実効按分×倍率）
+    equilibrium_home: float
+    competitive_home: float
+    top_quartile_home: float
     market_share_equilibrium_pct: float
     market_share_competitive_pct: float
 
-    # 制約
     capacity_cap_home: float
     fte_cap_home: Optional[float]
 
-    # 獲得目標
-    acquisition_floor_home: int  # 最低ライン（均衡按分と能力下限の高い方を抑制）
-    acquisition_target_home: int  # 本命KPI
-    acquisition_stretch_home: int  # 伸ばし目標
-    competition_index: float  # 0-100 競合厳しさ
+    acquisition_floor_home: int
+    acquisition_target_home: int
+    acquisition_stretch_home: int
+    competition_index: float
     competition_label: str
 
+    clinic_enhanced: float = 0.0
+    clinic_standard: float = 0.0
+    extra_visit_units: float = 0.0
     notes: list[str] = field(default_factory=list)
     assumptions: Dict[str, Any] = field(default_factory=dict)
 
@@ -75,47 +80,75 @@ def compute_acquisition_indicator(
     physician_fte: Optional[float] = None,
     local_avg_total_patients: Optional[float] = None,
     strategic_home_ratio: float = 0.60,
-    # 在支診のうち「実質的な訪問競合」とみなす割合
-    # T168: 患者数判明かつ20人以上 ≈ 全在支診の約37%、判明分の活動層 ≈ 55%
-    # ここでは「届出はあるが患者がごく少ない層」を除く既定 0.45
     active_competitor_rate: float = 0.45,
-    # 訪問特化が実効按分に対して取りうる倍率（上位層）
     top_quartile_multiplier: float = 2.5,
     ambition_multiplier: float = 1.35,
+    clinic_enhanced: Optional[float] = None,
+    clinic_standard: Optional[float] = None,
+    hospital_enhanced: Optional[float] = None,
+    hospital_standard: Optional[float] = None,
+    extra_visit_units: float = 0.0,
+    enhanced_clinic_rate: float = 1.0,
+    standard_clinic_rate: float = 0.35,
 ) -> AcquisitionIndicator:
     """競合加味の獲得目標を計算する。
 
     核心式
     ------
-    raw_units = clinics + hospitals * hospital_weight
-    effective_units = clinics * active_rate + hospitals * hospital_weight
-    competitive_home = regional_home_demand / effective_units
-
-    acquisition_target = median帯 =
-      clip(
-        competitive_home * ambition_multiplier,
-        lower=equilibrium,
-        upper=min(capacity_cap, fte_cap, top_quartile)
-      )
+    raw_units = clinics + hospitals * hospital_weight + extra
+    effective_units =
+        enhanced * enhanced_rate + standard * standard_rate
+        + hospitals * hospital_weight + extra
+    （enhanced/standard 未指定時は clinics × active_competitor_rate）
     """
     constants = load_constants()
     tiers = constants.get("capacity_tiers", {})
-    cap = constants["capacity_benchmarks"]
+    activity = constants.get("competitor_activity", {})
+    if enhanced_clinic_rate == 1.0 and "enhanced_clinic_rate" in activity:
+        enhanced_clinic_rate = float(activity["enhanced_clinic_rate"])
+    if standard_clinic_rate == 0.35 and "standard_clinic_rate" in activity:
+        standard_clinic_rate = float(activity["standard_clinic_rate"])
 
     clinics = max(float(competitors_clinics), 0.0)
     hospitals = max(float(competitors_hospitals), 0.0)
     hw = float(hospital_weight)
     home = max(float(regional_home_demand), 0.0)
     visit = max(float(regional_visit_demand), home)
+    extra = max(float(extra_visit_units), 0.0)
 
-    raw_units = max(clinics + hospitals * hw, 1.0)
-    effective_units = max(clinics * active_competitor_rate + hospitals * hw, 1.0)
+    if clinic_enhanced is None and clinic_standard is None:
+        c_enh = 0.0
+        c_std = clinics
+        use_split = False
+    else:
+        c_enh = max(float(clinic_enhanced or 0.0), 0.0)
+        c_std = max(float(clinic_standard if clinic_standard is not None else clinics - c_enh), 0.0)
+        use_split = True
+
+    raw_units = max(clinics + hospitals * hw + extra, 1.0)
+    if use_split:
+        effective_units = max(
+            c_enh * enhanced_clinic_rate
+            + c_std * standard_clinic_rate
+            + hospitals * hw
+            + extra,
+            1.0,
+        )
+        rate_note = (
+            f"機能強化型{c_enh:.0f}×{enhanced_clinic_rate:.2f}"
+            f"+従来型{c_std:.0f}×{standard_clinic_rate:.2f}"
+            f"+在支病×{hw:.2f}+訪問実施軽加算{extra:.1f}"
+        )
+        eff_rate_display = standard_clinic_rate
+    else:
+        effective_units = max(clinics * active_competitor_rate + hospitals * hw + extra, 1.0)
+        rate_note = f"在支診×{active_competitor_rate:.0%}+在支病×{hw:.2f}+軽加算{extra:.1f}"
+        eff_rate_display = active_competitor_rate
 
     equilibrium = home / raw_units
     competitive = home / effective_units
     top_q = competitive * top_quartile_multiplier
 
-    # 能力上限: 地域平均と specialty/enhanced の大きい方を居宅換算
     specialty_total = float(tiers.get("specialty_p90_total", 150.0))
     enhanced_total = float(tiers.get("enhanced_proxy_total", 200.0))
     local_total = float(local_avg_total_patients) if local_avg_total_patients else specialty_total
@@ -125,16 +158,9 @@ def compute_acquisition_indicator(
     per_fte = float(tiers.get("physician_home_per_fte", 100.0))
     fte_cap = physician_fte * per_fte if physician_fte and physician_fte > 0 else None
 
-    # 競合指数: 実効供給密度（需要1000人あたりの実効競合）を0-100に正規化
-    # 実効競合が需要に対して多いほど厳しい
-    density = effective_units / max(home / 1000.0, 0.01)  # units per 1000 home patients
-    # 経験的: 10未満=緩い, 40超=厳しい
+    density = effective_units / max(home / 1000.0, 0.01)
     competition_index = max(0.0, min(100.0, (density - 5.0) / 45.0 * 100.0))
 
-    # 獲得目標
-    # floor: 均衡按分（これ未満は「市場平均以下」）
-    # target: 実効按分×ambition を能力・FTEでキャップ
-    # stretch: 上位倍率を能力伸長キャップで抑制
     uncapped_target = competitive * ambition_multiplier
     uncapped_stretch = top_q
 
@@ -144,23 +170,20 @@ def compute_acquisition_indicator(
         upper_target = min(upper_target, fte_cap)
         upper_stretch = min(upper_stretch, fte_cap * 1.25)
 
-    # 競合が極めて厳しい場合、ambitionを抑える
     if competition_index >= 75:
         uncapped_target = competitive * min(ambition_multiplier, 1.15)
         uncapped_stretch = competitive * min(top_quartile_multiplier, 1.8)
 
-    floor = min(equilibrium, competitive)  # 通常 equilibrium < competitive
-    # floor は「最低でも均衡は取りに行く」だが、能力上限は超えない
+    floor = min(equilibrium, competitive)
     floor = min(floor, upper_target)
     target = max(floor, min(uncapped_target, upper_target))
     stretch = max(target, min(uncapped_stretch, upper_stretch))
 
     notes = [
         f"単純按分 = 居宅需要 {home:.0f} ÷ 生供給 {raw_units:.1f} = {equilibrium:.1f}",
-        f"実効按分 = 居宅需要 {home:.0f} ÷ 実効競合 {effective_units:.1f} "
-        f"(在支診×{active_competitor_rate:.0%}+在支病×{hw:.2f}) = {competitive:.1f}",
+        f"実効按分 = 居宅需要 {home:.0f} ÷ 実効競合 {effective_units:.1f} ({rate_note}) = {competitive:.1f}",
         f"獲得目標は実効按分×{ambition_multiplier:.2f}を能力/FTEで上限クリップ",
-        "在支診の多くは患者規模が小さいため、全届出数での単純割りは過小評価になる",
+        "機能強化型を重く、従来型・非在支の訪問実施を軽く数える",
         f"競合指数 {competition_index:.0f}/100（需要1000人あたり実効競合 {density:.1f}）",
     ]
     if fte_cap is not None:
@@ -174,7 +197,7 @@ def compute_acquisition_indicator(
         hospital_weight=round(hw, 3),
         raw_supply_units=round(raw_units, 2),
         effective_supply_units=round(effective_units, 2),
-        active_competitor_rate=active_competitor_rate,
+        active_competitor_rate=eff_rate_display,
         equilibrium_home=round(equilibrium, 1),
         competitive_home=round(competitive, 1),
         top_quartile_home=round(top_q, 1),
@@ -187,12 +210,18 @@ def compute_acquisition_indicator(
         acquisition_stretch_home=int(round(stretch)),
         competition_index=round(competition_index, 1),
         competition_label=_competition_label(competition_index),
+        clinic_enhanced=round(c_enh, 1),
+        clinic_standard=round(c_std, 1),
+        extra_visit_units=round(extra, 2),
         notes=notes,
         assumptions={
-            "active_competitor_rate": active_competitor_rate,
+            "enhanced_clinic_rate": enhanced_clinic_rate,
+            "standard_clinic_rate": standard_clinic_rate,
+            "active_competitor_rate_fallback": active_competitor_rate,
+            "extra_visit_units": extra,
             "top_quartile_multiplier": top_quartile_multiplier,
             "ambition_multiplier": ambition_multiplier,
             "strategic_home_ratio": strategic_home_ratio,
-            "t168_note": "active_competitor_rateは医療施設調査T168の活動層比率に基づく既定値",
+            "use_enhanced_split": use_split,
         },
     )
