@@ -10,6 +10,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
+from home_care_target.acquisition import compute_acquisition_indicator  # noqa: E402
 from home_care_target.catchment import (  # noqa: E402
     CatchmentPoint,
     MunicipalityGeo,
@@ -130,6 +131,41 @@ class TestDemandAndTargets(unittest.TestCase):
         s = aggregate_catchment_supply(point, munis, weight_method="circle_intersection")
         self.assertGreater(s.home_support_clinics, 0)
         self.assertTrue(any("circle_intersection" in x for x in s.sources))
+
+
+class TestAcquisition(unittest.TestCase):
+    def test_competition_differentiates(self):
+        # 競合が少ない院の方が獲得KPIが高い
+        low = compute_acquisition_indicator(
+            regional_home_demand=3000,
+            regional_visit_demand=7000,
+            competitors_clinics=40,
+            competitors_hospitals=5,
+            hospital_weight=1.0,
+            physician_fte=2.0,
+        )
+        high = compute_acquisition_indicator(
+            regional_home_demand=3000,
+            regional_visit_demand=7000,
+            competitors_clinics=400,
+            competitors_hospitals=40,
+            hospital_weight=1.2,
+            physician_fte=2.0,
+        )
+        self.assertGreater(low.acquisition_target_home, high.acquisition_target_home)
+        self.assertGreater(high.competition_index, low.competition_index)
+        self.assertGreater(low.competitive_home, low.equilibrium_home)
+        self.assertGreaterEqual(low.acquisition_stretch_home, low.acquisition_target_home)
+
+    def test_fte_caps_target(self):
+        a = compute_acquisition_indicator(
+            regional_home_demand=20000,
+            regional_visit_demand=40000,
+            competitors_clinics=50,
+            competitors_hospitals=5,
+            physician_fte=1.0,
+        )
+        self.assertLessEqual(a.acquisition_target_home, 100)
 
 
 if __name__ == "__main__":

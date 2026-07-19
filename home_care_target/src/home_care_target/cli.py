@@ -9,6 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from home_care_target.acquisition import compute_acquisition_indicator
 from home_care_target.catchment import aggregate_catchment_supply
 from home_care_target.demand import estimate_demand_for_catchment
 from home_care_target.facilities import (
@@ -77,31 +78,45 @@ def run_demo(as_json: bool = False, prefer_points: bool = True) -> int:
         # stash overlap for display
         target.group_overlap_share = overlap_share
 
+        acq = compute_acquisition_indicator(
+            regional_home_demand=home_adj,
+            regional_visit_demand=total_adj,
+            competitors_clinics=snap.home_support_clinics,
+            competitors_hospitals=snap.home_support_hospitals,
+            hospital_weight=snap.hospital_weight,
+            physician_fte=fte,
+            local_avg_total_patients=muni_supply.avg_patients_local_proxy,
+        )
+
         rows.append(
             {
                 "clinic": clinic.name,
                 "radius_km": clinic.radius_km,
                 "supply_method": snap.supply_method,
-                "home_support_clinics": snap.home_support_clinics,
-                "home_support_hospitals": snap.home_support_hospitals,
+                "competitors_clinics": snap.home_support_clinics,
+                "competitors_hospitals": snap.home_support_hospitals,
                 "hospital_weight": snap.hospital_weight,
-                "supply_units": snap.supply_units,
+                "raw_supply_units": acq.raw_supply_units,
+                "effective_supply_units": acq.effective_supply_units,
                 "elderly_65": demand.elderly_65,
                 "home_share_regional": demand.home_share_used,
                 "demand_visit_total": demand.visit_patients_total,
                 "demand_home_raw": demand.recommended_home_patients,
-                "demand_home_overlap_adjusted": home_adj,
+                "demand_home_overlap_adjusted": round(home_adj, 1),
                 "group_overlap_share": round(overlap_share, 3),
-                "fair_share_home": target.fair_share_home,
-                "capacity_baseline_home": target.capacity_baseline_home,
-                "capacity_active_home": target.capacity_active_home,
+                "equilibrium_home": acq.equilibrium_home,
+                "competitive_home": acq.competitive_home,
+                "acquisition_floor_home": acq.acquisition_floor_home,
+                "acquisition_target_home": acq.acquisition_target_home,
+                "acquisition_stretch_home": acq.acquisition_stretch_home,
+                "competition_index": acq.competition_index,
+                "competition_label": acq.competition_label,
                 "capacity_specialty_home": target.capacity_specialty_home,
-                "capacity_local_home": target.capacity_local_home,
-                "recommended_short_term_home": target.recommended_short_term_home,
-                "recommended_mid_term_home": target.recommended_mid_term_home,
-                "recommended_stretch_home": target.recommended_stretch_home,
+                "recommended_capacity_short": target.recommended_short_term_home,
+                "recommended_capacity_mid": target.recommended_mid_term_home,
                 "physician_fte": fte,
-                "notes": target.notes,
+                "acquisition_notes": acq.notes,
+                "capacity_notes": target.notes,
             }
         )
 
@@ -110,35 +125,35 @@ def run_demo(as_json: bool = False, prefer_points: bool = True) -> int:
         return 0
 
     print("=" * 120)
-    print("精度強化版: 在支診・在支病 × NDB需要 × 居宅患者目標")
+    print("競合加味・患者獲得指標（在支診/在支病を本軸）")
     print(
-        "需要: NDB年齢別受療率+都道府県居宅シェア / 供給: 施設点(優先)+病院ウェイト / "
-        "重み: 円交差 / 重複: グループ按分 / 能力: 訪問特化ティア"
+        "需要: NDB年齢別+都道府県居宅シェア / 競合: 施設点×活動率0.45+病院ウェイト / "
+        "KPI: 実効按分×野心度を能力・FTEで上限"
     )
     print("=" * 120)
     hdr = (
-        f"{'院名':<18} {'在支診':>6} {'在支病':>5} {'Hw':>4} {'需要居宅':>8} "
-        f"{'按分':>5} {'短期':>5} {'中期':>5} {'伸長':>5} {'重複':>5}"
+        f"{'院名':<16} {'診':>4} {'病':>3} {'実効U':>6} {'需要':>6} "
+        f"{'均衡':>5} {'実効':>5} {'獲得KPI':>7} {'伸長':>5} {'競合':>4} {'判定':<10}"
     )
     print(hdr)
     print("-" * 120)
     for r in rows:
         short = r["clinic"].replace("わかさクリニック", "")
         print(
-            f"{short:<18} {r['home_support_clinics']:>6.0f} {r['home_support_hospitals']:>5.0f} "
-            f"{r['hospital_weight']:>4.2f} {r['demand_home_overlap_adjusted']:>8.0f} "
-            f"{r['fair_share_home']:>5} {r['recommended_short_term_home']:>5} "
-            f"{r['recommended_mid_term_home']:>5} {r['recommended_stretch_home']:>5} "
-            f"{r['group_overlap_share']:>5.2f}"
+            f"{short:<16} {r['competitors_clinics']:>4.0f} {r['competitors_hospitals']:>3.0f} "
+            f"{r['effective_supply_units']:>6.1f} {r['demand_home_overlap_adjusted']:>6.0f} "
+            f"{r['equilibrium_home']:>5.0f} {r['competitive_home']:>5.0f} "
+            f"{r['acquisition_target_home']:>7} {r['acquisition_stretch_home']:>5} "
+            f"{r['competition_index']:>4.0f} {r['competition_label']:<10}"
         )
     print()
     hibari = next(r for r in rows if "ひばりが丘" in r["clinic"])
     print("詳細（ひばりが丘）:")
     for k, v in hibari.items():
-        if k != "notes":
+        if k not in ("acquisition_notes", "capacity_notes"):
             print(f"  {k}: {v}")
-    print("  notes:")
-    for n in hibari["notes"]:
+    print("  acquisition_notes:")
+    for n in hibari["acquisition_notes"]:
         print(f"    - {n}")
     return 0
 
