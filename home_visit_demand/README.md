@@ -59,6 +59,8 @@ PYTHONPATH=src python3 scripts/run_hq_pipeline.py
 
 運用ルール（半径・KPI・施設）: [`docs/HQ_OPERATING_RULES.md`](docs/HQ_OPERATING_RULES.md)
 
+**成果サマリー資料（本部向け）**: [`docs/HQ_BRIEFING_2026-07.md`](docs/HQ_BRIEFING_2026-07.md) / [`examples/wakasa_hq_briefing.html`](examples/wakasa_hq_briefing.html)
+
 ## 実績キャリブレーション
 
 ```bash
