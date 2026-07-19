@@ -685,9 +685,9 @@ def format_hq_report(result: HQPipelineResult) -> str:
         )
     lines.append("")
 
-    lines.append("【2. 院別市場・期待獲得率帯・実績・外部競合】")
+    lines.append("【2. 院別市場・期待獲得率帯・実績・在支診競合】")
     lines.append(
-        f"{'院名':<8} {'密度帯':<8} {'在宅競合':>6} {'市場居宅':>8} {'期待帯%':>10} "
+        f"{'院名':<8} {'密度帯':<8} {'在支診':>6} {'市場居宅':>8} {'期待帯%':>10} "
         f"{'実績居宅':>8} {'獲得率%':>8} {'判定':>6} {'排他居宅':>8}"
     )
     lines.append("-" * 100)
@@ -699,7 +699,9 @@ def format_hq_report(result: HQPipelineResult) -> str:
             f"{r.name:<8} {r.density_tier:<8} {r.home_visit_competitors:>6} {r.market_home:>8.0f} "
             f"{band:>10} {ah:>8} {cap:>8} {r.capture_vs_band:>6} {r.exclusive_market_home:>8.0f}"
         )
-    lines.append("  ※在宅競合=医療情報ネット上の在宅・訪問診療寄り診療所（名称/科目近似、自院名除外）")
+    lines.append(
+        "  ※在支診=関東信越厚生局 届出受理の在宅療養支援診療所（座標突合できた件数・自院名除外）"
+    )
     lines.append("")
     lines.append("【3. 半径感度（5 / 8 / 10 km）】")
     lines.append(

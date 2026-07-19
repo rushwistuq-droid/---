@@ -196,7 +196,7 @@ footer {{ padding: 0 1.5rem 2rem; color: var(--muted); font-size: .8rem; }}
     <table>
       <thead>
         <tr>
-          <th>院</th><th>密度帯</th><th>在宅競合</th><th>市場居宅</th><th>排他居宅</th>
+          <th>院</th><th>密度帯</th><th>在支診</th><th>市場居宅</th><th>排他居宅</th>
           <th>期待帯%</th><th>実績居宅</th><th>獲得率%</th><th>判定</th><th>外部競合</th>
         </tr>
       </thead>
@@ -204,7 +204,7 @@ footer {{ padding: 0 1.5rem 2rem; color: var(--muted); font-size: .8rem; }}
         {''.join(clinic_rows)}
       </tbody>
     </table>
-    <p class="note">在宅競合は医療情報ネットの名称・科目による近似。施設は下表の契約KPIで評価（市場シェアは使わない）。</p>
+    <p class="note">在支診は関東信越厚生局の届出受理名簿。座標は医療情報ネットと突合できた件数（下限）。施設は契約KPIで評価。</p>
   </section>
 
   <section>

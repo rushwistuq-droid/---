@@ -48,12 +48,13 @@ PYTHONPATH=src python3 -m home_visit_demand "..." --legacy
 | **排他的市場** | 当該院が最寄りのメッシュ需要 | 院間カニバリゼーション把握 |
 
 ```bash
-# 13院の本部パイプライン（重複除去・外部競合・期待シェア帯・半径感度・施設KPI・アクション・ダッシュボード）
-PYTHONPATH=src python3 scripts/build_competitors.py   # 初回・データ更新時
+# 13院の本部パイプライン（在支診競合・重複・感度・アクション・主担当マップ・浦和軌跡）
+PYTHONPATH=src python3 scripts/build_competitors.py    # 初回
+PYTHONPATH=src python3 scripts/build_zaishishin.py     # 厚生局在支診（初回・更新時）
 PYTHONPATH=src python3 scripts/run_hq_pipeline.py
-# → examples/wakasa_hq_pipeline_report.txt
-# → examples/wakasa_action_sheets.txt
 # → examples/wakasa_hq_dashboard.html
+# → examples/mitaka_cluster_ownership_map.html
+# → examples/urawa_ramp_tracking.txt
 ```
 
 運用ルール（半径・KPI・施設）: [`docs/HQ_OPERATING_RULES.md`](docs/HQ_OPERATING_RULES.md)
@@ -73,7 +74,8 @@ PYTHONPATH=src python3 scripts/calibrate.py path/to/actuals.yaml
 - 総務省 令和2年国勢調査 地域メッシュ統計 T001102
 - 社人研 地域別将来推計人口（令和5年推計）市区町村5歳階級
 - 厚労省 介護サービス情報公表システム オープンデータ
-- 厚労省 医療情報ネット オープンデータ（診療所・外部競合）
+- 厚労省 医療情報ネット オープンデータ（診療所・座標突合用）
+- 関東信越厚生局 届出受理医療機関名簿（在宅療養支援診療所）
 - OpenStreetMap Nominatim / Wikidata
 
 入手元の詳細は `data/SOURCES.md`。

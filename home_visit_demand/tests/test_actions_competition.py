@@ -31,11 +31,22 @@ class TestCompetitionAndActions(unittest.TestCase):
             assert spec.loader
             spec.loader.exec_module(mod)
             mod.build()
+        if not (DATA_DIR / "zaishishin.csv.gz").exists():
+            import importlib.util
+
+            path = ROOT / "scripts" / "build_zaishishin.py"
+            spec = importlib.util.spec_from_file_location("build_zaishishin", path)
+            mod = importlib.util.module_from_spec(spec)
+            assert spec.loader
+            spec.loader.exec_module(mod)
+            mod.build()
 
     def test_competition_tokorozawa(self):
         m = competition_metrics(35.805, 139.455, 8.0, elderly_65=280_000)
         self.assertGreaterEqual(m["all_clinics_in_radius"], 100)
-        self.assertGreaterEqual(m["home_visit_competitors"], 1)
+        # 在支診（厚生局）が主指標
+        self.assertGreaterEqual(m.get("zaishishin_competitors", 0), 20)
+        self.assertGreaterEqual(m["home_visit_competitors"], 20)
         self.assertIn("外部競合", m["external_competition_tier"])
 
     def test_external_share_adjust(self):
