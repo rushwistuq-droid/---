@@ -48,10 +48,15 @@ PYTHONPATH=src python3 -m home_visit_demand "..." --legacy
 | **排他的市場** | 当該院が最寄りのメッシュ需要 | 院間カニバリゼーション把握 |
 
 ```bash
-# 13院の本部パイプライン（重複除去・期待シェア帯・半径感度・施設KPI）
+# 13院の本部パイプライン（重複除去・外部競合・期待シェア帯・半径感度・施設KPI・アクション・ダッシュボード）
+PYTHONPATH=src python3 scripts/build_competitors.py   # 初回・データ更新時
 PYTHONPATH=src python3 scripts/run_hq_pipeline.py
 # → examples/wakasa_hq_pipeline_report.txt
+# → examples/wakasa_action_sheets.txt
+# → examples/wakasa_hq_dashboard.html
 ```
+
+運用ルール（半径・KPI・施設）: [`docs/HQ_OPERATING_RULES.md`](docs/HQ_OPERATING_RULES.md)
 
 ## 実績キャリブレーション
 
@@ -68,6 +73,7 @@ PYTHONPATH=src python3 scripts/calibrate.py path/to/actuals.yaml
 - 総務省 令和2年国勢調査 地域メッシュ統計 T001102
 - 社人研 地域別将来推計人口（令和5年推計）市区町村5歳階級
 - 厚労省 介護サービス情報公表システム オープンデータ
+- 厚労省 医療情報ネット オープンデータ（診療所・外部競合）
 - OpenStreetMap Nominatim / Wikidata
 
 入手元の詳細は `data/SOURCES.md`。
@@ -75,7 +81,7 @@ PYTHONPATH=src python3 scripts/calibrate.py path/to/actuals.yaml
 ## テスト
 
 ```bash
-PYTHONPATH=src python3 -m unittest tests.test_estimator tests.test_precision tests.test_hq_analysis -v
+PYTHONPATH=src python3 -m unittest tests.test_estimator tests.test_precision tests.test_hq_analysis tests.test_actions_competition -v
 ```
 
 ## ディレクトリ

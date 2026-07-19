@@ -114,6 +114,10 @@ class ClinicMarketRow:
     exclusive_market_home: float = 0.0
     contested_elderly_65: float = 0.0
     sibling_clinics_in_radius: int = 0
+    home_visit_competitors: int = 0
+    all_clinics_in_radius: int = 0
+    external_competition_tier: str = ""
+    clinics_per_10k_elderly: float = 0.0
     notes: list[str] = field(default_factory=list)
 
 
@@ -148,6 +152,8 @@ class HQPipelineResult:
     sensitivity: list[SensitivityRow]
     facility_kpi: list[dict[str, Any]]
     recommendations: list[str]
+    action_sheets: list[dict[str, Any]] = field(default_factory=list)
+    radius_policy: dict[str, str] = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -442,6 +448,8 @@ def build_clinic_market_row(
     radius_km: float,
     exclusive: dict[str, float] | None = None,
 ) -> ClinicMarketRow:
+    from .competition import adjust_share_for_external_competition, competition_metrics
+
     r = estimate_precision(
         clinic.lat,
         clinic.lon,
@@ -459,6 +467,9 @@ def build_clinic_market_row(
     low, high, notes = adjust_share_band_for_competition(
         band, sibling_clinics=siblings, facilities_per_10k=fac_per_10k
     )
+    comp = competition_metrics(clinic.lat, clinic.lon, radius_km, elderly)
+    low, high, ext_notes = adjust_share_for_external_competition(low, high, comp)
+    notes = notes + ext_notes
     market_home = float(r.recommended_home_patients)
     actual_home = clinic.actual_home_patients
     capture = (
@@ -490,6 +501,10 @@ def build_clinic_market_row(
         exclusive_market_home=float(excl.get("exclusive_market_home", 0.0)),
         contested_elderly_65=float(excl.get("contested_elderly_65", 0.0)),
         sibling_clinics_in_radius=siblings,
+        home_visit_competitors=int(comp["home_visit_competitors"]),
+        all_clinics_in_radius=int(comp["all_clinics_in_radius"]),
+        external_competition_tier=str(comp["external_competition_tier"]),
+        clinics_per_10k_elderly=float(comp["clinics_per_10k_elderly"]),
         notes=notes + [str(band.get("note", ""))],
     )
 
@@ -593,12 +608,29 @@ def build_recommendations(rows: list[ClinicMarketRow], overlap: OverlapSummary) 
     return recs
 
 
+RADIUS_POLICY = {
+    "standard_km": "8",
+    "core_km": "5",
+    "wide_km": "10",
+    "rule": (
+        "院間比較・本部定例の標準半径は8km。"
+        "5kmは近傍コア（獲得の強さ）、10kmは広域ポテンシャルの補助指標。"
+        "院間比較は必ず同一半径で行う。"
+    ),
+    "when_to_use_5km": "立ち上げ初期・強い獲得院の再現範囲の確認・営業コア設計",
+    "when_to_use_10km": "出店検討の広域需要・遠方紹介の余地確認（獲得率は参考）",
+    "do_not": "半径を院ごとに変えてランキングする / 10km市場を短期目標の母数にする",
+}
+
+
 def run_hq_pipeline(
     clinics: list[ClinicInput],
     *,
     primary_radius_km: float = 8.0,
     sensitivity_radii: list[float] | None = None,
 ) -> HQPipelineResult:
+    from .action_sheets import action_sheets_to_dicts, build_action_sheets
+
     overlap, per_clinic = analyze_mesh_overlap(clinics, primary_radius_km)
     rows = [
         build_clinic_market_row(c, clinics, primary_radius_km, per_clinic.get(c.id))
@@ -607,7 +639,7 @@ def run_hq_pipeline(
     sensitivity = run_radius_sensitivity(clinics, sensitivity_radii or [5.0, 8.0, 10.0])
     facility_kpi = build_facility_kpi(clinics, rows)
     recommendations = build_recommendations(rows, overlap)
-    return HQPipelineResult(
+    result = HQPipelineResult(
         definitions=dict(HQ_DEFINITIONS),
         radius_km_primary=primary_radius_km,
         clinics=rows,
@@ -615,7 +647,10 @@ def run_hq_pipeline(
         sensitivity=sensitivity,
         facility_kpi=facility_kpi,
         recommendations=recommendations,
+        radius_policy=dict(RADIUS_POLICY),
     )
+    result.action_sheets = action_sheets_to_dicts(build_action_sheets(result))
+    return result
 
 
 def format_hq_report(result: HQPipelineResult) -> str:
@@ -650,23 +685,22 @@ def format_hq_report(result: HQPipelineResult) -> str:
         )
     lines.append("")
 
-    lines.append("【2. 院別市場・期待獲得率帯・実績】")
+    lines.append("【2. 院別市場・期待獲得率帯・実績・外部競合】")
     lines.append(
-        f"{'院名':<8} {'密度帯':<10} {'市場居宅':>8} {'期待帯%':>10} {'期待居宅':>14} "
+        f"{'院名':<8} {'密度帯':<8} {'在宅競合':>6} {'市場居宅':>8} {'期待帯%':>10} "
         f"{'実績居宅':>8} {'獲得率%':>8} {'判定':>6} {'排他居宅':>8}"
     )
     lines.append("-" * 100)
     for r in result.clinics:
         band = f"{r.expected_share_low_pct:g}-{r.expected_share_high_pct:g}"
-        exp = f"{r.expected_home_low:.0f}-{r.expected_home_high:.0f}"
         ah = f"{r.actual_home:.0f}" if r.actual_home is not None else "-"
         cap = f"{r.home_capture_pct:.1f}" if r.home_capture_pct is not None else "-"
         lines.append(
-            f"{r.name:<8} {r.density_tier:<10} {r.market_home:>8.0f} {band:>10} {exp:>14} "
-            f"{ah:>8} {cap:>8} {r.capture_vs_band:>6} {r.exclusive_market_home:>8.0f}"
+            f"{r.name:<8} {r.density_tier:<8} {r.home_visit_competitors:>6} {r.market_home:>8.0f} "
+            f"{band:>10} {ah:>8} {cap:>8} {r.capture_vs_band:>6} {r.exclusive_market_home:>8.0f}"
         )
+    lines.append("  ※在宅競合=医療情報ネット上の在宅・訪問診療寄り診療所（名称/科目近似、自院名除外）")
     lines.append("")
-
     lines.append("【3. 半径感度（5 / 8 / 10 km）】")
     lines.append(
         f"{'院名':<8} "
@@ -709,29 +743,33 @@ def format_hq_report(result: HQPipelineResult) -> str:
     lines.append("")
 
     lines.append("【5. 所見・次アクション】")
+    if result.radius_policy:
+        lines.append(f"  - 半径ルール: {result.radius_policy.get('rule', '')}")
     # radius recommendation heuristic
     ratios = []
     for s in result.sensitivity:
-        m5 = s.by_radius.get("5", {}).get("market_home") or 0
         m8 = s.by_radius.get("8", {}).get("market_home") or 0
         m10 = s.by_radius.get("10", {}).get("market_home") or 0
         if m8:
-            ratios.append((m10 / m8, m5 / m8 if m8 else 0))
+            ratios.append(m10 / m8)
     if ratios:
-        avg_10 = sum(a for a, _ in ratios) / len(ratios)
+        avg_10 = sum(ratios) / len(ratios)
         lines.append(
             f"  - 半径感度: 10km市場 / 8km市場 の平均比 ≈ {avg_10:.2f}。"
-            + (
-                " 8km→10kmの伸びが緩やかなら標準8kmを維持してよい。"
-                if avg_10 < 1.35
-                else " 10kmで大きく伸びる院は広域競合の再確認を。"
-            )
+            " 標準は8km維持（比較の母数を固定）。"
         )
     for rec in result.recommendations:
         lines.append(f"  - {rec}")
+    if result.action_sheets:
+        lines.append("")
+        lines.append("【6. アクションシート要約】")
+        for a in result.action_sheets:
+            if a.get("clinic_id") == "cluster_mitaka" or a.get("decision") in ("やる", "横展開"):
+                lines.append(
+                    f"  - [{a['decision']}/{a['priority']}] {a['clinic_name']}: {a['rationale']}"
+                )
     lines.append("=" * 100)
     return "\n".join(lines)
-
 
 def clinics_from_actuals_yaml(data: dict) -> list[ClinicInput]:
     out: list[ClinicInput] = []
