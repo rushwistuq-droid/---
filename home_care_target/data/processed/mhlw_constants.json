@@ -83,10 +83,11 @@
     "enhanced_proxy_patients": 200.0
   },
   "mix": {
-    "home_share_of_visit_patients": 0.421,
+    "home_share_of_visit_patients": 0.4035,
     "facility_share_of_visit_patients": 0.547,
     "other_share": 0.032,
-    "visits_per_patient_per_month": 1.9
+    "visits_per_patient_per_month": 1.9,
+    "note": "全国居宅シェアは都道府県NDB再集計。地域別は prefecture_home_shares.json"
   },
   "supply_weights": {
     "home_support_clinic": 1.0,
@@ -96,5 +97,24 @@
   "demand_fallback": {
     "elderly65_visit_rate": 0.045,
     "note": "本モジュールでは需要は外部入力を優先。未指定時のみフォールバック"
+  },
+  "capacity_tiers": {
+    "standard_mean_total": 65.74,
+    "active_mean_total": 97.2,
+    "enhanced_proxy_total": 200.0,
+    "specialty_p90_total": 150.0,
+    "specialty_top_total": 200.0,
+    "strategic_home_ratio_default": 0.6,
+    "physician_home_per_fte": 100.0,
+    "note": "standard/active=一般在支診, specialty=訪問特化・150人超階級"
+  },
+  "overlap": {
+    "method": "inverse_distance_soft_assignment",
+    "group_overlap_radius_km": 16.0,
+    "note": "同一グループ院が2R以内にある場合、需要を距離逆数で按分"
+  },
+  "catchment": {
+    "weight_method": "circle_intersection",
+    "note": "市区町村を等面積円で近似し、半径円との交差面積比を重みとする"
   }
 }

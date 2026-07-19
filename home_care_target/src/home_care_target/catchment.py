@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass, field
 from typing import Dict, Iterable, List, Optional, Sequence
 
@@ -13,26 +12,7 @@ from .data_loader import (
     get_secondary_clinic_stats,
     load_constants,
 )
-
-
-def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    r = 6371.0
-    p1, p2 = math.radians(lat1), math.radians(lat2)
-    dp = math.radians(lat2 - lat1)
-    dl = math.radians(lon2 - lon1)
-    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
-    return 2 * r * math.asin(math.sqrt(a))
-
-
-def overlap_weight(distance_km: float, radius_km: float, area_km2: float) -> float:
-    """自治体中心が半径内にあるときの簡易重複重み（0.15〜1.0）。"""
-    if distance_km > radius_km:
-        return 0.0
-    ratio = min(
-        1.0,
-        (radius_km - distance_km + 3.0) / (math.sqrt(max(area_km2, 0.1)) + 3.0),
-    )
-    return max(0.15, min(1.0, ratio))
+from .geometry import circle_intersection_weight, haversine_km, legacy_centroid_weight
 
 
 @dataclass
@@ -108,11 +88,18 @@ def aggregate_catchment_supply(
     point: CatchmentPoint,
     municipalities: Sequence[MunicipalityGeo],
     hospital_weight: Optional[float] = None,
+    weight_method: str = "circle_intersection",
 ) -> CatchmentSupply:
     """半径内自治体の在支診・在支病を距離重み付きで精密集計する。"""
     constants = load_constants()
     if hospital_weight is None:
         hospital_weight = float(constants["supply_weights"]["home_support_hospital"])
+
+    weight_fn = (
+        circle_intersection_weight
+        if weight_method == "circle_intersection"
+        else legacy_centroid_weight
+    )
 
     details: List[dict] = []
     sources = set()
@@ -133,7 +120,7 @@ def aggregate_catchment_supply(
 
     for muni in municipalities:
         dist = haversine_km(point.lat, point.lon, muni.lat, muni.lon)
-        w = overlap_weight(dist, point.radius_km, muni.area_km2)
+        w = weight_fn(dist, point.radius_km, muni.area_km2)
         if w <= 0:
             continue
         fac = _facility_breakdown(muni.name)
@@ -205,7 +192,7 @@ def aggregate_catchment_supply(
         secondary_area_stats=secondary_stats,
         prefecture_stats=prefecture_stats,
         details=details,
-        sources=sorted(sources),
+        sources=sorted(sources) + [f"weight_method={weight_method}"],
     )
 
 

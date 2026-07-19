@@ -1,0 +1,35 @@
+{
+  "source": {
+    "care_facilities": "厚生労働省 令和5年介護サービス施設・事業所調査 概況（定員・利用率）＋特定施設・GH利用者の公的概数",
+    "social_medical_stats": "厚生労働省 2023年社会医療診療行為別統計（在宅患者訪問診療料・月1回以上算定患者）"
+  },
+  "care_insurance_facility_beds_2023": {
+    "介護老人福祉施設": 597973,
+    "介護老人保健施設": 369365,
+    "介護医療院": 46970,
+    "介護療養型医療施設": 6052
+  },
+  "care_insurance_facility_beds_total": 1020360,
+  "care_insurance_facility_residents_est": 935299,
+  "broader_extra_residents": {
+    "特定施設入居者生活介護_利用者概数": 270000,
+    "認知症対応型共同生活介護_利用者概数": 210000
+  },
+  "residential_facility_residents_est": 1415299,
+  "facility_residents_per_elderly_65": 0.03915181056184126,
+  "facility_residents_per_elderly_75": 0.07341903823209005,
+  "national_visit_patients_2023_06": 1001102,
+  "national_elderly_65_2022": 36149000,
+  "national_elderly_75_2022": 19277000,
+  "visit_patients_per_elderly_65": 0.027693767462447096,
+  "share_within_75plus": {
+    "75-79": 0.3646833013435701,
+    "80-84": 0.2979198007988795,
+    "85-89": 0.20516677906313224,
+    "90+": 0.1322301187944182
+  },
+  "share_within_65_74": {
+    "65-69": 0.44659791370317686,
+    "70-74": 0.5534020862968232
+  }
+}
