@@ -36,12 +36,22 @@ PYTHONPATH=src python3 -m home_visit_demand "..." --legacy
 | 6 | ポリゴン交差モジュール | `polygons.py`（shapely利用時は面積交差、無ければbbox近似） |
 | 7 | 実績キャリブレーション | `scripts/calibrate.py` + YAMLで実績÷推計の縮小推定 |
 
-## 出力の見方
+## 出力の見方（本部定義）
 
-- **推奨・推定居宅訪問診療患者数**: 本部判断の中心値
-- **真・施設患者**: 定員法とNDB法の統合
-- **集合住宅（同一建物の居宅分）**: 施設ではない同一建物患者
-- **品質フラグ**: データ欠落・地域差の注意喚起
+| 指標 | 意味 | 使い方 |
+|------|------|--------|
+| **居宅市場規模** | 半径圏の居宅訪問診療需要（他院含む） | 出店・ポテンシャル判断の母数 |
+| **居宅獲得率** | 自院実績居宅 ÷ 居宅市場規模 | 競合下の取れ高。市場規模には掛けない |
+| **施設市場需要** | 圏内入居系に由来する需要 | 参考。契約施設数の説明には使わない |
+| **施設契約KPI** | 自院が契約・担当する施設の実績患者 | 施設はこちらで評価（パネル内構成比） |
+| **ユニオン市場** | グループ各院圏域の重複除去後需要 | グループ全体のポテンシャル |
+| **排他的市場** | 当該院が最寄りのメッシュ需要 | 院間カニバリゼーション把握 |
+
+```bash
+# 13院の本部パイプライン（重複除去・期待シェア帯・半径感度・施設KPI）
+PYTHONPATH=src python3 scripts/run_hq_pipeline.py
+# → examples/wakasa_hq_pipeline_report.txt
+```
 
 ## 実績キャリブレーション
 
@@ -65,7 +75,7 @@ PYTHONPATH=src python3 scripts/calibrate.py path/to/actuals.yaml
 ## テスト
 
 ```bash
-PYTHONPATH=src python3 -m unittest tests.test_estimator tests.test_precision -v
+PYTHONPATH=src python3 -m unittest tests.test_estimator tests.test_precision tests.test_hq_analysis -v
 ```
 
 ## ディレクトリ

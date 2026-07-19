@@ -470,6 +470,11 @@ def format_precision_report(r: PrecisionEstimationResult) -> str:
     lines.append(f"座標: {r.lat:.6f}, {r.lon:.6f} / 半径 {r.radius_km:g} km")
     lines.append(f"手法: {r.method}")
     lines.append("")
+    lines.append("【指標の定義】")
+    lines.append("  - 本レポートの患者数は『地域の市場規模』（他院含む需要）です。")
+    lines.append("  - 自院実績 ÷ 市場規模 = 獲得率。市場規模そのものに実績係数は掛けません。")
+    lines.append("  - 施設の『真・施設患者』は圏内の施設市場需要であり、契約施設KPIではありません。")
+    lines.append("")
     lines.append("【品質フラグ】")
     for q in r.quality_flags:
         lines.append(f"  - {q}")
@@ -509,18 +514,18 @@ def format_precision_report(r: PrecisionEstimationResult) -> str:
         f"（NDB法）: {fs['facility_patients_from_ndb']:,.1f}"
     )
     lines.append("")
-    lines.append("【訪問診療需要推計（月間・ユニーク患者）】")
-    lines.append(f"  総訪問診療患者数: {r.visit_patients_total:,.1f}")
-    lines.append(f"  真・施設患者: {r.visit_patients_facility_true:,.1f}")
+    lines.append("【訪問診療需要推計＝市場規模（月間・ユニーク患者）】")
+    lines.append(f"  総訪問診療市場: {r.visit_patients_total:,.1f}")
+    lines.append(f"  施設市場需要: {r.visit_patients_facility_true:,.1f}")
     lines.append(f"  集合住宅（同一建物の居宅分）: {r.visit_patients_apartment_same_building:,.1f}")
     lines.append(f"  戸建等居宅（同一建物以外）: {r.visit_patients_home_detached:,.1f}")
-    lines.append(f"  居宅合計: {r.visit_patients_home_total:,.1f}")
+    lines.append(f"  居宅市場合計: {r.visit_patients_home_total:,.1f}")
     lines.append("")
-    lines.append(f"★ 推奨・推定居宅訪問診療患者数: {r.recommended_home_patients:,.1f} 人")
+    lines.append(f"★ 居宅市場規模（推奨中心値）: {r.recommended_home_patients:,.1f} 人")
     if r.recommended_home_patients_calibrated is not None:
         lines.append(
-            f"★ 実績キャリブレーション後: {r.recommended_home_patients_calibrated:,.1f} 人 "
-            f"（factor={r.calibration_factor}）"
+            f"☆ 参考・自院獲得イメージ（市場×係数）: {r.recommended_home_patients_calibrated:,.1f} 人 "
+            f"（factor={r.calibration_factor} ※市場規模の補正ではない）"
         )
     lines.append("")
     lines.append("【年齢階級別】")
