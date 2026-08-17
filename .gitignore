@@ -1,0 +1,5 @@
+# 機密データ（絶対にコミットしない）
+analysis/confidential/
+**/confidential/**
+*.secret
+*.secret.*
