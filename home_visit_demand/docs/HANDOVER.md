@@ -2,26 +2,30 @@
 
 **作成目的**: 複数の AI エージェントに散在していた作業・データ・判断を一箇所に集約し、新エージェントが即座に引き継げるようにする。  
 **最終更新**: 2026-08-17  
-**対象クライアント**: わかさクリニックグループ（13院）
+**対象クライアント**: わかさクリニックグループ（13院）  
+**正リポジトリ**: `github.com/rushwistuq-droid/homemedical-quality-and-score`
 
 ---
 
 ## 0. 新エージェントへの最初の指示（コピペ用）
 
 ```
-home_visit_demand/ の訪問診療地域需要推計プロジェクトを引き継ぐ。
+リポジトリ rushwistuq-droid/homemedical-quality-and-score を引き継ぐ。
 
-1. 本ファイル docs/HANDOVER.md を最初に読む
+1. home_visit_demand/docs/HANDOVER.md を最初に読む
 2. 続けて docs/HQ_BRIEFING_2026-07.md と docs/HQ_OPERATING_RULES.md を読む
-3. ブランチ cursor/home-visit-patient-estimation-28cb、PR #2
-4. 機密実績を復元:
+3. 機密実績を復元:
+   cd home_visit_demand
+   mkdir -p data/confidential
    cp data/templates/actuals_2026-07.example.yaml data/confidential/actuals_2026-07.yaml
    cp data/templates/urawa_ramp.example.yaml data/confidential/urawa_ramp.yaml
-5. 依存関係とパイプライン実行:
-   cd home_visit_demand && pip install -r requirements.txt
+4. 依存関係とパイプライン実行:
+   pip install -r requirements.txt
    PYTHONPATH=src python3 scripts/run_hq_pipeline.py
-6. 成果物を examples/ で確認（特に wakasa_hq_briefing.html）
+5. 成果物を examples/ で確認（特に wakasa_hq_briefing.html）
 ```
+
+移行手順: リポジトリルートの `docs/MIGRATION.md`
 
 ---
 
@@ -41,22 +45,29 @@ home_visit_demand/ の訪問診療地域需要推計プロジェクトを引き�
 
 ---
 
-## 2. リポジトリ・ブランチ・PR
+## 2. リポジトリ
 
 | 項目 | 値 |
 |------|-----|
-| GitHub | `github.com/rushwistuq-droid/---` |
+| **正リポジトリ（移行先）** | `github.com/rushwistuq-droid/homemedical-quality-and-score` |
 | メインブランチ | `main` |
-| **作業ブランチ（本プロジェクト）** | `cursor/home-visit-patient-estimation-28cb` |
-| **PR** | https://github.com/rushwistuq-droid/---/pull/2 |
 | パッケージルート | `home_visit_demand/` |
+| 移行手順 | リポジトリルート `docs/MIGRATION.md` |
 
-### 関連ブランチ（別 AI・別フェーズの成果）
+### 移行元（参照用・開発終了）
 
-| ブランチ | 内容 | 関係 |
-|----------|------|------|
-| `cursor/wakasa-clinic-regional-analysis-853a` | 市区町村代表点による簡易 13 院分析（旧） | v1 相当。本 PR に統合済み |
-| `cursor/home-care-target-patients-1cfb` | `home_care_target/` パッケージ（在支診精密カウント・居宅 KPI 目標） | **別系統**。必要なら PYTHONPATH 併用 |
+| 項目 | 値 |
+|------|-----|
+| 旧リポジトリ | `github.com/rushwistuq-droid/---` |
+| 旧ブランチ | `cursor/home-visit-patient-estimation-28cb` |
+| 旧 PR | https://github.com/rushwistuq-droid/---/pull/2 |
+
+### 関連（別 AI・別フェーズ）
+
+| リポジトリ/ブランチ | 内容 | 関係 |
+|---------------------|------|------|
+| `---` / `cursor/home-care-target-patients-1cfb` | `home_care_target/`（居宅 KPI 目標） | **別系統**。必要なら後から統合 |
+| `---` / `cursor/wakasa-clinic-regional-analysis-853a` | 市区町村代表点の簡易分析（v1） | 本プロジェクトに統合済み |
 
 ---
 
@@ -276,7 +287,7 @@ home_visit_demand/examples/wakasa_hq_briefing.html
 GitHub の blob ページはコード表示になるため、HTML Preview 経由:
 
 ```
-https://htmlpreview.github.io/?https://raw.githubusercontent.com/rushwistuq-droid/---/cursor/home-visit-patient-estimation-28cb/home_visit_demand/examples/wakasa_hq_briefing.html
+https://htmlpreview.github.io/?https://raw.githubusercontent.com/rushwistuq-droid/homemedical-quality-and-score/main/home_visit_demand/examples/wakasa_hq_briefing.html
 ```
 
 ---

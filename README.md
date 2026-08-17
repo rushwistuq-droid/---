@@ -1,22 +1,37 @@
-# 訪問診療・居宅患者数の地域推定（高精度版）
+# homemedical-quality-and-score
 
-`home_visit_demand/` に、クリニック住所から半径8kmの居宅訪問診療患者数を推計するシステムがあります。
+わかさクリニックグループ向けの **訪問診療・地域需要推計** と、今後の **品質・スコアリング** 拡張を行うリポジトリです。
 
-**高精度版**では次を実装済みです。
+## 含まれるもの
 
-- 国勢調査メッシュ人口（約250m）
-- 社人研市区町村5歳階級（2025スケール）
-- 都道府県別NDB受療率（居宅/施設の強度分離）
-- 介護情報公表システムの施設座標・定員
-- 同一建物の施設/集合住宅分解
-- 実績キャリブレーション
+| パス | 内容 |
+|------|------|
+| [`home_visit_demand/`](home_visit_demand/) | 半径 8km 圏の居宅市場規模推計・本部分析パイプライン（メイン） |
+| [`home_visit_demand/docs/HANDOVER.md`](home_visit_demand/docs/HANDOVER.md) | **引き継ぎ資料**（新エージェントはここから） |
+| [`home_visit_demand/docs/HQ_BRIEFING_2026-07.md`](home_visit_demand/docs/HQ_BRIEFING_2026-07.md) | 本部向け成果サマリー |
+| [`docs/MIGRATION.md`](docs/MIGRATION.md) | 旧リポジトリからの移行手順 |
+
+## クイックスタート
 
 ```bash
 cd home_visit_demand
 pip install -r requirements.txt
-python3 scripts/build_v2_datasets.py
-PYTHONPATH=src python3 -m home_visit_demand "埼玉県所沢市若狭4-2468-31"
+
+# 機密実績の復元（初回のみ）
+mkdir -p data/confidential
+cp data/templates/actuals_2026-07.example.yaml data/confidential/actuals_2026-07.yaml
+cp data/templates/urawa_ramp.example.yaml data/confidential/urawa_ramp.yaml
+
+# 全成果一括生成
+PYTHONPATH=src python3 scripts/run_hq_pipeline.py
 ```
 
-詳細は [home_visit_demand/README.md](home_visit_demand/README.md)。  
-新エージェント向け引き継ぎ: [home_visit_demand/docs/HANDOVER.md](home_visit_demand/docs/HANDOVER.md)
+## 旧リポジトリから移行した場合
+
+移行元: `rushwistuq-droid/---`（ブランチ `cursor/home-visit-patient-estimation-28cb`）
+
+手順: [`docs/MIGRATION.md`](docs/MIGRATION.md)
+
+## リポジトリ
+
+https://github.com/rushwistuq-droid/homemedical-quality-and-score
