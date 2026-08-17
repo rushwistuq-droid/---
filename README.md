@@ -18,4 +18,5 @@ python3 scripts/build_v2_datasets.py
 PYTHONPATH=src python3 -m home_visit_demand "埼玉県所沢市若狭4-2468-31"
 ```
 
-詳細は [home_visit_demand/README.md](home_visit_demand/README.md)。
+詳細は [home_visit_demand/README.md](home_visit_demand/README.md)。  
+新エージェント向け引き継ぎ: [home_visit_demand/docs/HANDOVER.md](home_visit_demand/docs/HANDOVER.md)

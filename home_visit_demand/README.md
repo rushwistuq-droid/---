@@ -61,6 +61,8 @@ PYTHONPATH=src python3 scripts/run_hq_pipeline.py
 
 **成果サマリー資料（本部向け）**: [`docs/HQ_BRIEFING_2026-07.md`](docs/HQ_BRIEFING_2026-07.md) / [`examples/wakasa_hq_briefing.html`](examples/wakasa_hq_briefing.html)
 
+**引き継ぎ資料（新エージェント向け）**: [`docs/HANDOVER.md`](docs/HANDOVER.md)
+
 ## 実績キャリブレーション
 
 ```bash
