@@ -85,12 +85,29 @@ git push homemedical HEAD:main
 
 ---
 
-## 手順 C — zip で手動移行
+## 手順 C — zip で手動移行（Git 操作が難しい場合）
 
-GitHub 操作が難しい場合:
+**推奨**: zip をダウンロードして展開するだけで全ファイルを取得できます。
 
-1. 旧 repo の `cursor/home-visit-patient-estimation-28cb` ブランチを zip ダウンロード
-2. 新 repo に unzip して commit & push
+1. `homemedical-quality-and-score-handover.zip` をダウンロード（約 14 MB）  
+   - Cursor エージェントの Artifacts から  
+   - または clone 後 `bash scripts/create_handover_zip.sh`
+2. 詳細: [`docs/DOWNLOAD.md`](DOWNLOAD.md)
+
+```bash
+unzip homemedical-quality-and-score-handover.zip
+cd homemedical-quality-and-score
+git init
+git add .
+git commit -m "Initial import from handover zip"
+git remote add origin https://github.com/rushwistuq-droid/homemedical-quality-and-score.git
+git branch -M main
+git push -u origin main
+```
+
+---
+
+## 手順 D — zip で手動移行（旧手順・GitHub zip ダウンロード）
 
 ```bash
 unzip ---.zip -d homemedical-quality-and-score

@@ -32,6 +32,23 @@ PYTHONPATH=src python3 scripts/run_hq_pipeline.py
 
 手順: [`docs/MIGRATION.md`](docs/MIGRATION.md)
 
+## 一括ダウンロード（zip）
+
+Git 操作なしで全ファイルを取得する場合:
+
+1. **Cursor エージェント実行画面**の Artifacts / 添付から  
+   `homemedical-quality-and-score-handover.zip`（約 14MB）をダウンロード
+2. またはリポジトリ clone 後に生成:
+
+```bash
+bash scripts/create_handover_zip.sh
+# → homemedical-quality-and-score-handover.zip がルートに作成される
+```
+
+zip を展開したら `DOWNLOAD_README.txt` と `home_visit_demand/docs/HANDOVER.md` を参照。
+
+詳細: [`docs/DOWNLOAD.md`](docs/DOWNLOAD.md)
+
 ## リポジトリ
 
 https://github.com/rushwistuq-droid/homemedical-quality-and-score
